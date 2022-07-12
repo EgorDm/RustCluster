@@ -1,34 +1,49 @@
-use nalgebra::{DefaultAllocator, Dim, DMatrix, Field, Matrix, RawStorage, Scalar, U1};
-use simba::scalar::{SupersetOf};
-use nalgebra::allocator::Allocator;
+use std::mem::MaybeUninit;
+use nalgebra::{DMatrix, Dynamic, Matrix, Storage};
 
-pub fn row_covariance(data: &DMatrix<f64>) -> DMatrix<f64> {
+pub fn row_covariance<S: Storage<f64, Dynamic, Dynamic>>(
+    data: &Matrix<f64, Dynamic, Dynamic, S>,
+) -> DMatrix<f64> {
     let mean = data.row_mean();
-    let mut centered = data.clone();
+    let mut centered = data.clone_owned();
     centered.row_iter_mut().for_each(|mut row| {
         row -= &mean;
     });
     centered.transpose() * centered / data.nrows() as f64
 }
 
-pub fn col_covariance(data: &DMatrix<f64>) -> DMatrix<f64> {
+pub fn col_covariance<S: Storage<f64, Dynamic, Dynamic>>(
+    data: &Matrix<f64, Dynamic, Dynamic, S>,
+) -> DMatrix<f64> {
     let mean = data.column_mean();
-    let mut centered = data.clone();
+    let mut centered = data.clone_owned();
     centered.column_iter_mut().for_each(|mut col| {
         col -= &mean;
     });
     &centered * centered.transpose() / data.ncols() as f64
 }
 
+pub fn each_ref<T, const N: usize>(data: &[T; N]) -> [&T; N] {
+    // Unlike in `map`, we don't need a guard here, as dropping a reference
+    // is a noop.
+    let mut out = [MaybeUninit::uninit(); N];
+    for (src, dst) in data.iter().zip(&mut out) {
+        dst.write(src);
+    }
+
+    // SAFETY: All elements of `dst` are properly initialized and
+    // `MaybeUninit<T>` has the same layout as `T`, so this cast is valid.
+    unsafe { (&mut out as *mut _ as *mut [&T; N]).read() }
+}
 
 #[rustfmt::skip]
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use nalgebra::{DefaultAllocator, Dim, DMatrix, OMatrix};
     use statrs::assert_almost_eq;
     use crate::stats::{col_covariance, row_covariance};
 
-    fn test_almost_mat<R1: Dim, C1: Dim, R2: Dim, C2: Dim>(
+    pub fn test_almost_mat<R1: Dim, C1: Dim, R2: Dim, C2: Dim>(
         value: &OMatrix<f64, R1, C1>,
         expected: &OMatrix<f64, R2, C2>,
         acc: f64,
@@ -42,7 +57,7 @@ mod tests {
         }
     }
 
-    fn points1() -> DMatrix<f64> {
+    pub fn points1() -> DMatrix<f64> {
         DMatrix::from_row_slice(10, 3, &[
             0.0303, 0.1105, 0.0289,
             0.3770, 0.0281, 0.1693,
