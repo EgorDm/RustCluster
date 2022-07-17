@@ -1,15 +1,65 @@
 use std::io::Read;
 use std::time::Instant;
-use nalgebra::{DMatrix, DVector};
+use nalgebra::{DMatrix, DVector, Dynamic, Matrix, Storage};
 use ndarray::{Array1, Array2};
 use ndarray_npy::read_npy;
+use plotters::prelude::*;
 use rand::prelude::StdRng;
-use rand::SeedableRng;
+use rand::{Rng, SeedableRng};
+use dpmmsc::clusters::SuperClusterParams;
 use dpmmsc::global::{GlobalActions, GlobalState};
 use dpmmsc::local::{LocalActions, LocalState};
 use dpmmsc::metrics::normalized_mutual_info_score;
 use dpmmsc::options::{FitOptions, ModelOptions};
 use dpmmsc::priors::{NIW, NIWParams, NIWStats, SufficientStats};
+
+fn plot<S: Storage<f64, Dynamic, Dynamic>>(
+    path: &str,
+    points: &Matrix<f64, Dynamic, Dynamic, S>, labels: &[usize], clusters: &[SuperClusterParams<NIW>]
+) {
+    let (mut min_x, mut max_x) = (f64::INFINITY, f64::NEG_INFINITY);
+    let (mut min_y, mut max_y) = (f64::INFINITY, f64::NEG_INFINITY);
+    for row in points.row_iter() {
+        min_x = min_x.min(row[0]);
+        max_x = max_x.max(row[0]);
+        min_y = min_y.min(row[1]);
+        max_y = max_y.max(row[1]);
+    }
+
+    let root = BitMapBackend::new(path, (1024, 768)).into_drawing_area();
+    root.fill(&WHITE).unwrap();
+    let areas = root.split_by_breakpoints([944], [80]);
+    let mut scatter_ctx = ChartBuilder::on(&areas[2])
+        .x_label_area_size(40)
+        .y_label_area_size(40)
+        .build_cartesian_2d(min_x..max_x, min_y..max_y).unwrap();
+    scatter_ctx
+        .configure_mesh()
+        .disable_x_mesh()
+        .disable_y_mesh()
+        .draw().unwrap();
+    scatter_ctx.draw_series(
+        points
+            .row_iter()
+            .zip(labels.iter())
+            .map(|(row, label)|
+                Circle::new((row[0], row[1]), 2, Palette99::pick(*label).mix(0.9).filled(),
+                )),
+    ).unwrap();
+
+    scatter_ctx.draw_series(
+        clusters.iter()
+            .enumerate()
+            .map(|(k, cluster)| {
+                let color = Palette99::pick(k);
+                let circle = Circle::new((cluster.prim.dist.mu()[0], cluster.prim.dist.mu()[1]), 8, color.filled().stroke_width(2));
+                circle
+            }),
+    ).unwrap();
+
+    root.present().expect("Unable to write result to file, please make sure 'plotters-doc-data' dir exists under current dir");
+    println!("Result has been saved to {}", path);
+}
 
 
 fn main() {
@@ -20,6 +70,11 @@ fn main() {
     let y_data: Array1<i64> = read_npy("examples/data/y.npy").unwrap();
     let y = DVector::from_row_slice(&y_data.as_slice().unwrap());
     let y = y.map(|x| x as usize).into_owned();
+
+    let mut rng = StdRng::seed_from_u64(42);
+    let plot_idx: Vec<usize> = (0..1000).map(|_| rng.gen_range(0..x.nrows())).collect();
+    let plot_x = x.select_rows(&plot_idx);
+    let plot_y = y.select_rows(&plot_idx);
 
     let dim = x.ncols();
 
@@ -86,6 +141,9 @@ fn main() {
 
         let nmi = normalized_mutual_info_score(y.as_slice(), local_state.labels.as_slice());
         println!("Run iteration {} in {:.2?}; k={}, nmi={}", i, elapsed, global_state.n_clusters(), nmi);
+
+        plot(&format!("examples/data/plot/step_{:04}.png", i), &plot_x, plot_y.as_slice(), &global_state.clusters);
+
 
         // calculate NMI
     }

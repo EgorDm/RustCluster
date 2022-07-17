@@ -15,6 +15,7 @@ num-traits = "0.2.14"
 [dev-dependencies]
 ndarray-npy = "0.8.1"
 ndarray = "0.15.4"
+plotters = "0.3.2"
 
 [[example]]
 name = "synthetic_2d"
