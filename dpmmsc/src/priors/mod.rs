@@ -8,7 +8,7 @@ pub use niw::*;
 mod niw;
 
 pub trait ConjugatePrior: Clone {
-    type HyperParams: Debug + Clone + PartialEq;
+    type HyperParams: PriorHyperParams + Debug + Clone + PartialEq;
     type SuffStats: SufficientStats + Debug + Clone + PartialEq;
 
     fn posterior(
@@ -26,6 +26,10 @@ pub trait ConjugatePrior: Clone {
         post: &Self::HyperParams,
         data: &Matrix<f64, Dynamic, Dynamic, S>,
     ) -> f64;
+}
+
+pub trait PriorHyperParams {
+    fn default(dim: usize) -> Self;
 }
 
 pub trait SufficientStats: Sized {

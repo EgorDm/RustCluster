@@ -5,7 +5,7 @@ use rand::Rng;
 use statrs::consts::LN_PI;
 use statrs::distribution::{InverseWishart, MultivariateNormal};
 use statrs::function::gamma::mvlgamma;
-use crate::priors::{ConjugatePrior, SufficientStats};
+use crate::priors::{ConjugatePrior, GaussianPrior, PriorHyperParams, SufficientStats};
 use crate::stats::row_covariance;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -62,6 +62,17 @@ pub struct NIWParams {
     pub mu: DVector<f64>,
     pub nu: f64,
     pub psi: DMatrix<f64>,
+}
+
+impl PriorHyperParams for NIWParams {
+    fn default(dim: usize) -> Self {
+        Self {
+            kappa: 1.0,
+            mu: DVector::zeros(dim),
+            nu: dim as f64 + 3.0,
+            psi: DMatrix::identity(dim, dim),
+        }
+    }
 }
 
 impl NIWParams {
@@ -121,6 +132,12 @@ impl ConjugatePrior for NIW {
         data: &Matrix<f64, Dynamic, Dynamic, S>,
     ) -> f64 {
         todo!()
+    }
+}
+
+impl GaussianPrior for NIW {
+    fn sample<R: Rng + ?Sized>(prior: &Self::HyperParams, rng: &mut R) -> MultivariateNormal {
+        prior.sample(rng)
     }
 }
 
