@@ -2,7 +2,8 @@ use std::marker::PhantomData;
 use rand::Rng;
 use statrs::function::gamma::ln_gamma;
 use crate::clusters::{ClusterParams, SuperClusterParams};
-use crate::global::state::{GlobalState, ModelOptions};
+use crate::global::state::{GlobalState};
+use crate::options::ModelOptions;
 use crate::priors::{GaussianPrior, SufficientStats};
 use crate::stats::each_ref;
 
@@ -81,7 +82,7 @@ impl<P: GaussianPrior> GlobalActions<P> {
     ) -> Vec<(usize, usize)> {
         let mut decisions = vec![false; global.n_clusters()];
         for (k, cluster) in global.clusters.iter().enumerate() {
-            if options.outlier_mod > 0.0 && k == 1 {
+            if k == 0 && options.outlier.is_some() {
                 continue;
             }
 
@@ -119,7 +120,7 @@ impl<P: GaussianPrior> GlobalActions<P> {
     ) -> Vec<(usize, usize)> {
         let mut decisions = Vec::new();
         for ki in 0..global.n_clusters() {
-            if options.outlier_mod > 0.0 && ki == 1 {
+            if ki == 0 && options.outlier.is_some() {
                 continue;
             }
 

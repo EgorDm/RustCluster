@@ -4,8 +4,10 @@ use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
 use statrs::distribution::{Continuous};
 use crate::global::GlobalState;
+use crate::options::ModelOptions;
 use crate::priors::{GaussianPrior, SufficientStats};
 
+pub type LocalStats<P: GaussianPrior> = Vec<(P::SuffStats, [P::SuffStats; 2])>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LocalState<P: GaussianPrior> {
@@ -16,6 +18,24 @@ pub struct LocalState<P: GaussianPrior> {
 }
 
 impl<P: GaussianPrior> LocalState<P> {
+    pub fn from_init<R: Rng>(
+        data: DMatrix<f64>,
+        n_clusters: usize,
+        options: &ModelOptions<P>,
+        rng: &mut R
+    ) -> Self {
+        let n_points = data.nrows();
+        let n_clusters = n_clusters + options.outlier.is_some() as usize;
+        let labels = DVector::from_fn(n_points, |i, _| rng.gen_range(0..n_clusters));
+        let labels_aux = DVector::from_fn(n_points, |i, _| rng.gen_range(0..2));
+        Self {
+            data,
+            labels,
+            labels_aux,
+            _phantoms: PhantomData,
+        }
+    }
+
     pub fn n_points(&self) -> usize {
         self.data.nrows()
     }
@@ -23,7 +43,7 @@ impl<P: GaussianPrior> LocalState<P> {
     pub fn update_sample_labels<R: Rng>(
         global: &GlobalState<P>,
         local: &mut LocalState<P>,
-        stochastic: bool,
+        is_final: bool,
         rng: &mut R,
     ) {
         // Calculate log likelihood for each point
@@ -36,13 +56,13 @@ impl<P: GaussianPrior> LocalState<P> {
         }
 
         // Sample labels
-        if stochastic {
-            normalize_ll(&mut ll);
-            sample_weighted(&ll, &mut local.labels, rng);
-        } else {
+        if is_final {
             for (i, row) in ll.row_iter().enumerate() {
                 local.labels[i] = row.iamax_full().1;
             }
+        } else {
+            normalize_ll(&mut ll);
+            sample_weighted(&ll, &mut local.labels, rng);
         }
     }
 
@@ -68,11 +88,11 @@ impl<P: GaussianPrior> LocalState<P> {
     }
 
     pub fn collect_stats(
-        global: &GlobalState<P>,
         local: &LocalState<P>,
-    ) -> Vec<(P::SuffStats, [P::SuffStats; 2])> {
-        let mut stats = Vec::with_capacity(global.n_clusters());
-        for k in 0..global.n_clusters() {
+        n_clusters: usize,
+    ) -> LocalStats<P> {
+        let mut stats = Vec::with_capacity(n_clusters);
+        for k in 0..n_clusters {
             stats.push(
                 Self::collect_stats_cluster(local, k)
             );

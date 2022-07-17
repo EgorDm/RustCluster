@@ -4,6 +4,8 @@ pub mod clusters;
 pub mod model;
 pub mod local;
 pub mod global;
+pub mod options;
+pub mod metrics;
 
 #[cfg(test)]
 mod tests {
