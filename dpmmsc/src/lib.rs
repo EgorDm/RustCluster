@@ -6,6 +6,7 @@ pub mod local;
 pub mod global;
 pub mod options;
 pub mod metrics;
+pub mod plotting;
 
 #[cfg(test)]
 mod tests {

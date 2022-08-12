@@ -55,6 +55,8 @@ impl<P: GaussianPrior> LocalState<P> {
             }
         }
 
+        let u = ll.row(0).clone_owned();
+
         // Sample labels
         if is_final {
             for (i, row) in ll.row_iter().enumerate() {
@@ -77,7 +79,7 @@ impl<P: GaussianPrior> LocalState<P> {
             for (i, _) in local.labels.iter().enumerate().filter(|(_, &label)| label == k) {
                 let point = local.data.row(i).transpose();
                 for a in 0..2 {
-                    ll[(i, a)] = cluster.aux[a].dist.ln_pdf(&point) + ln_weights[k];
+                    ll[(i, a)] = cluster.aux[a].dist.ln_pdf(&point) + ln_weights[a];
                 }
             }
         }
@@ -113,7 +115,7 @@ impl<P: GaussianPrior> LocalState<P> {
         let idx_r = local.labels.iter().cloned()
             .zip(local.labels_aux.iter().cloned())
             .enumerate()
-            .filter(|(_, (x, y))| *x == cluster_id && *y == 0)
+            .filter(|(_, (x, y))| *x == cluster_id && *y == 1)
             .map(|(i, _)| i);
 
         let idx: Vec<_> = idx_l.iter().cloned().chain(idx_r).collect();

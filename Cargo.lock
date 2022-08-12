@@ -397,6 +397,7 @@ dependencies = [
  "ndarray-npy",
  "num-traits",
  "plotters",
+ "plotters-backend",
  "rand",
  "simba",
  "statrs",

@@ -37,7 +37,7 @@ impl<P: GaussianPrior> GlobalState<P> {
                 dist,
             );
             let cluster = SuperClusterParams::from_split_params(prim, options.alpha, options.burnout_period, rng);
-            points_count.push(cluster.n_points() as f64);
+            points_count.push((cluster.n_points() as f64).max(1.0));
             clusters.push(cluster);
         }
 

@@ -1,3 +1,4 @@
+use std::f64::consts::PI;
 use std::io::Read;
 use std::time::Instant;
 use nalgebra::{DMatrix, DVector, Dynamic, Matrix, Storage};
@@ -57,6 +58,23 @@ fn plot<S: Storage<f64, Dynamic, Dynamic>>(
             }),
     ).unwrap();
 
+    for (k, cluster) in clusters.iter().enumerate() {
+        scatter_ctx.draw_series(LineSeries::new(
+            (0..100).map(|i| {
+                let t = i as f64 / 100.0 * PI * 2.0;
+                let (cx, cy) = (t.cos(), t.sin());
+
+                let x = cluster.prim.dist.cov()[(0, 0)] * cx + cluster.prim.dist.cov()[(0, 1)] * cy + cluster.prim.dist.mu()[0];
+                let y = cluster.prim.dist.cov()[(1, 0)] * cx + cluster.prim.dist.cov()[(1, 1)] * cy + cluster.prim.dist.mu()[1];
+
+                (x, y)
+            }),
+            Palette99::pick(k)
+        )).unwrap();
+    }
+
+
+
     root.present().expect("Unable to write result to file, please make sure 'plotters-doc-data' dir exists under current dir");
     println!("Result has been saved to {}", path);
 }
@@ -80,9 +98,11 @@ fn main() {
 
     let mut model_options = ModelOptions::<NIW>::default(dim);
     model_options.alpha = 100.0;
-    let fit_options = FitOptions::default();
-    let mut rng = StdRng::seed_from_u64(fit_options.seed);
+    model_options.outlier = None;
+    let mut fit_options = FitOptions::default();
+    fit_options.init_clusters = 2;
 
+    let mut rng = StdRng::seed_from_u64(fit_options.seed);
     let mut local_state = LocalState::<NIW>::from_init(x, fit_options.init_clusters, &model_options, &mut rng);
     let data_stats = NIWStats::from_data(&local_state.data);
     let mut global_state = GlobalState::<NIW>::from_init(&data_stats, fit_options.init_clusters, &model_options, &mut rng);
@@ -118,7 +138,7 @@ fn main() {
             let bad_clusters = GlobalState::collect_bad_clusters(&mut global_state);
             LocalState::update_reset_clusters(&mut local_state, &bad_clusters, &mut rng);
 
-            if !no_more_splits {
+            /*if !no_more_splits {
                 let split_idx = GlobalActions::check_and_split(&mut global_state, &model_options, &mut rng);
                 LocalActions::apply_split(&mut local_state, &split_idx, &mut rng);
                 if split_idx.len() > 0 {
@@ -132,7 +152,7 @@ fn main() {
                 }
                 let merge_idx = GlobalActions::check_and_merge(&mut global_state, &model_options, &mut rng);
                 LocalActions::apply_merge(&mut local_state, &merge_idx);
-            }
+            }*/
 
             let removed_idx = GlobalState::update_remove_empty_clusters(&mut global_state, &model_options);
             LocalState::update_remove_clusters(&mut local_state, &removed_idx);
