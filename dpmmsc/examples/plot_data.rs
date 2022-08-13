@@ -7,7 +7,7 @@ use plotters::prelude::*;
 use dpmmsc::plotting::{Cluster2D, Ellipse, init_axes2d, axes_range_from_points};
 use dpmmsc::stats::row_covariance;
 
-const PATH: &str = "examples/data/plot/data_dist.png";
+const PATH: &str = "examples/data/plot/plot_data.png";
 
 fn main() {
     let x_data: Array2<f64> = read_npy("examples/data/x.npy").unwrap();

@@ -76,6 +76,10 @@ impl PriorHyperParams for NIWParams {
 }
 
 impl NIWParams {
+    pub fn new(kappa: f64, mu: DVector<f64>, nu: f64, psi: DMatrix<f64>) -> Self {
+        NIWParams { kappa, mu, nu, psi }
+    }
+
     pub fn from_data<S: Storage<f64, Dynamic, Dynamic>>(
         kappa: f64,
         nu: f64,
