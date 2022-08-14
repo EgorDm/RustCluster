@@ -73,6 +73,17 @@ impl<P: GaussianPrior> SuperClusterParams<P> {
         (prim, aux, weights)
     }
 
+    pub fn update_post(
+        &mut self,
+        stats: P::SuffStats,
+        stats_aux: [P::SuffStats; 2],
+    ) {
+        self.prim.update_post(stats);
+        for (i, stats_aux) in stats_aux.into_iter().enumerate() {
+            self.aux[i].update_post(stats_aux);
+        }
+    }
+
     pub fn update_history(&mut self, ll: f64) {
         self.ll_history[..].rotate_right(1);
         self.ll_history[0] = ll;
@@ -108,7 +119,12 @@ impl<P: GaussianPrior> ClusterParams<P> {
     }
 
     pub fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> MultivariateNormal {
-        P::sample(&self.prior, rng)
+        P::sample(&self.post, rng)
+    }
+
+    pub fn update_post(&mut self, stats: P::SuffStats) {
+        self.post = P::posterior(&self.prior, &stats);
+        self.stats = stats;
     }
 
     pub fn marginal_log_likelihood(&self) -> f64 {

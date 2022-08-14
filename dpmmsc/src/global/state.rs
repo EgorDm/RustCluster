@@ -74,7 +74,9 @@ impl<P: GaussianPrior> GlobalState<P> {
             for (k, dist) in aux.into_iter().enumerate() {
                 cluster.aux[k].dist = dist;
             }
+
             cluster.weights = weights;
+
             cluster.update_history(
                 cluster.aux.iter().map(|c| c.marginal_log_likelihood()).sum::<f64>()
             );
@@ -87,6 +89,15 @@ impl<P: GaussianPrior> GlobalState<P> {
         } else {
             stick_breaking_sample(&points_count[..], 0.0, rng)
         };
+    }
+
+    pub fn update_clusters_post(
+        global: &mut GlobalState<P>,
+        stats: LocalStats<P>
+    ) {
+        for (k, (prim, aux)) in stats.into_iter().enumerate() {
+            global.clusters[k].update_post(prim, aux)
+        }
     }
 
     pub fn collect_bad_clusters(

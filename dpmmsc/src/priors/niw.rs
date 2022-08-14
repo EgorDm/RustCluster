@@ -149,8 +149,9 @@ impl Distribution<MultivariateNormal> for NIWParams {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> MultivariateNormal {
         let w = InverseWishart::new(self.nu, self.nu * &self.psi).unwrap();
         let sigma = w.sample(rng);
-        let mv = MultivariateNormal::new(self.mu.clone(), sigma.clone()).unwrap();
+        let mv = MultivariateNormal::new(self.mu.clone(), sigma.clone() / self.kappa).unwrap();
         let mu = mv.sample(rng);
+
         MultivariateNormal::new(mu, sigma).unwrap()
     }
 }
