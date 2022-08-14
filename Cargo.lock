@@ -252,7 +252,7 @@ dependencies = [
  "lazy_static",
  "num-traits",
  "oorandom",
- "plotters",
+ "plotters 0.3.2",
  "rayon",
  "regex",
  "serde",
@@ -396,8 +396,8 @@ dependencies = [
  "ndarray",
  "ndarray-npy",
  "num-traits",
- "plotters",
- "plotters-backend",
+ "plotters 0.3.3",
+ "plotters-backend 0.3.4 (git+https://github.com/EgorDm/plotters.git?branch=bugfix/vertex-colinearity)",
  "rand",
  "simba",
  "statrs",
@@ -551,15 +551,14 @@ dependencies = [
 
 [[package]]
 name = "image"
-version = "0.24.2"
+version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28edd9d7bc256be2502e325ac0628bde30b7001b9b52e0abe31a1a9dc2701212"
+checksum = "7e30ca2ecf7666107ff827a8e481de6a132a9b687ed3bb20bb1c144a36c00964"
 dependencies = [
  "bytemuck",
  "byteorder",
  "color_quant",
  "jpeg-decoder",
- "num-iter",
  "num-rational",
  "num-traits",
  "png",
@@ -764,17 +763,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "num-iter"
-version = "0.1.43"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d03e6c028c5dc5cac6e2dec0efda81fc887605bb3d884578bb6d6bf7514e252"
-dependencies = [
- "autocfg",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
 name = "num-rational"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -903,15 +891,27 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9428003b84df1496fb9d6eeee9c5f8145cb41ca375eb0dad204328888832811f"
 dependencies = [
+ "num-traits",
+ "plotters-backend 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "plotters-svg 0.3.2",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "plotters"
+version = "0.3.3"
+source = "git+https://github.com/EgorDm/plotters.git?branch=bugfix/vertex-colinearity#d421f0a59e68bcedb3a159901e1b00dd3215dbf8"
+dependencies = [
  "chrono",
  "font-kit",
  "image",
  "lazy_static",
  "num-traits",
  "pathfinder_geometry",
- "plotters-backend",
+ "plotters-backend 0.3.4 (git+https://github.com/EgorDm/plotters.git?branch=bugfix/vertex-colinearity)",
  "plotters-bitmap",
- "plotters-svg",
+ "plotters-svg 0.3.3",
  "ttf-parser",
  "wasm-bindgen",
  "web-sys",
@@ -924,14 +924,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "193228616381fecdc1224c62e96946dfbc73ff4384fba576e052ff8c1bea8142"
 
 [[package]]
+name = "plotters-backend"
+version = "0.3.4"
+source = "git+https://github.com/EgorDm/plotters.git?branch=bugfix/vertex-colinearity#d421f0a59e68bcedb3a159901e1b00dd3215dbf8"
+
+[[package]]
 name = "plotters-bitmap"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c4a1f21490a6cf4a84c272ad20bd7844ed99a3178187a4c5ab7f2051295beef"
+version = "0.3.3"
+source = "git+https://github.com/EgorDm/plotters.git?branch=bugfix/vertex-colinearity#d421f0a59e68bcedb3a159901e1b00dd3215dbf8"
 dependencies = [
  "gif",
  "image",
- "plotters-backend",
+ "plotters-backend 0.3.4 (git+https://github.com/EgorDm/plotters.git?branch=bugfix/vertex-colinearity)",
 ]
 
 [[package]]
@@ -940,7 +944,15 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e0918736323d1baff32ee0eade54984f6f201ad7e97d5cfb5d6ab4a358529615"
 dependencies = [
- "plotters-backend",
+ "plotters-backend 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "plotters-svg"
+version = "0.3.3"
+source = "git+https://github.com/EgorDm/plotters.git?branch=bugfix/vertex-colinearity#d421f0a59e68bcedb3a159901e1b00dd3215dbf8"
+dependencies = [
+ "plotters-backend 0.3.4 (git+https://github.com/EgorDm/plotters.git?branch=bugfix/vertex-colinearity)",
 ]
 
 [[package]]

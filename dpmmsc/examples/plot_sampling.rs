@@ -1,14 +1,17 @@
 use nalgebra::{DMatrix, DVector};
+use ndarray::AssignElem;
+use num_traits::real::Real;
 use rand::prelude::*;
 use plotters::prelude::*;
 use dpmmsc::plotting::{Cluster2D, init_axes2d};
-use dpmmsc::priors::{GaussianPrior, NIW, NIWParams};
+use dpmmsc::priors::{ConjugatePrior, GaussianPrior, NIW, NIWParams, NIWStats, SufficientStats};
 use statrs::distribution::{InverseWishart, MultivariateNormal};
 
 
 fn main() {
     // plot_points_dist();
-    plot_niw_dist();
+    // plot_niw_dist();
+    plot_niw_chain();
 }
 
 
@@ -20,7 +23,6 @@ fn plot_points_dist() {
 
     let dist = MultivariateNormal::new(mu.clone(), cov.clone()).unwrap();
     let mut rng = StdRng::seed_from_u64(0);
-
 
 
     let root = BitMapBackend::new(PATH, (1024, 768)).into_drawing_area();
@@ -52,9 +54,9 @@ fn plot_niw_dist() {
     let cov = DMatrix::from_row_slice(2, 2, &[1.0, 0.0, 0.0, 1.0]);
 
     let dist_params = NIWParams::new(1.0, mu.clone(), 5.0, cov.clone());
-    // let mut rng = StdRng::seed_from_u64(0);
-    let mut rng = StdRng::seed_from_u64(1);
-    let mut rng = StdRng::seed_from_u64(2);
+    let mut rng = StdRng::seed_from_u64(42);
+    // let mut rng = StdRng::seed_from_u64(1);
+    // let mut rng = StdRng::seed_from_u64(2);
 
     let root = BitMapBackend::new(PATH, (1024, 768)).into_drawing_area();
     let mut plot_ctx = init_axes2d((-10.0..10.0, -10.0..10.0), &root);
@@ -75,11 +77,70 @@ fn plot_niw_dist() {
             Cluster2D::from_mat(
                 dist.mu(), dist.cov(),
                 50,
-                Palette99::pick(i+3).filled(),
-                Palette99::pick(i+3).stroke_width(2),
+                Palette99::pick(i + 3).filled(),
+                Palette99::pick(i + 3).stroke_width(2),
             )
         ).unwrap();
     }
+
+    root.present().expect("Unable to write result to file, please make sure 'plotters-doc-data' dir exists under current dir");
+    println!("Result has been saved to {}", PATH);
+}
+
+fn plot_niw_chain() {
+    const PATH: &str = "examples/data/plot/plot_sampling_niw_chain.png";
+
+    let mu = DVector::from_row_slice(&[0.0, 0.0]);
+    let cov = DMatrix::from_row_slice(2, 2, &[1.0, 0.0, 0.0, 1.0]);
+
+    let mut dist_params = NIWParams::new(1.0, mu.clone(), 10.0, cov.clone());
+    let mut rng = StdRng::seed_from_u64(42);
+
+    let root = BitMapBackend::new(PATH, (1024, 768)).into_drawing_area();
+    let mut plot_ctx = init_axes2d((-5.0..5.0, -5.0..5.0), &root);
+
+    plot_ctx.draw_series(
+        Cluster2D::from_mat(
+            &mu, &cov,
+            20,
+            Palette99::pick(1).filled(),
+            Palette99::pick(1).stroke_width(4),
+        )
+    ).unwrap();
+
+    for i in 0..5 {
+        let mut dist = NIW::sample(&dist_params, &mut rng);
+        let mut points = DMatrix::<f64>::zeros(500, 2);
+        for mut point in points.row_iter_mut() {
+            point.copy_from(&dist.sample(&mut rng).transpose());
+        }
+
+        let stats = NIWStats::from_data(&points);
+        dist_params = NIW::posterior(&dist_params, &stats);
+
+        plot_ctx.draw_series(
+            points.row_iter()
+                .map(|x| Circle::new((x[0], x[1]), 2, Palette99::pick(i + 3).mix(0.8).filled()))
+        ).unwrap();
+
+        plot_ctx.draw_series(
+            Cluster2D::from_mat(
+                dist.mu(), dist.cov(),
+                50,
+                Palette99::pick(i + 3).filled(),
+                Palette99::pick(i + 3).stroke_width(2),
+            )
+        ).unwrap()
+            .label(i.to_string())
+            .legend(move |(x, y)| Rectangle::new([(x, y - 5), (x + 10, y + 5)], Palette99::pick(i + 3).filled()));
+    }
+
+    plot_ctx
+        .configure_series_labels()
+        .border_style(&BLACK)
+        .draw()
+        .unwrap();
+
 
     root.present().expect("Unable to write result to file, please make sure 'plotters-doc-data' dir exists under current dir");
     println!("Result has been saved to {}", PATH);
