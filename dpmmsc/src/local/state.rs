@@ -86,7 +86,7 @@ impl<P: GaussianPrior> LocalState<P> {
 
         // Sample labels
         normalize_ll(&mut ll);
-        sample_weighted(&ll, &mut local.labels, rng);
+        sample_weighted(&ll, &mut local.labels_aux, rng);
     }
 
     pub fn collect_stats(
@@ -95,9 +95,7 @@ impl<P: GaussianPrior> LocalState<P> {
     ) -> LocalStats<P> {
         let mut stats = Vec::with_capacity(n_clusters);
         for k in 0..n_clusters {
-            stats.push(
-                Self::collect_stats_cluster(local, k)
-            );
+            stats.push(Self::collect_stats_cluster(local, k));
         }
         stats
     }
