@@ -3,8 +3,8 @@ use ndarray::AssignElem;
 use num_traits::real::Real;
 use rand::prelude::*;
 use plotters::prelude::*;
-use dpmmsc::plotting::{Cluster2D, init_axes2d};
-use dpmmsc::priors::{ConjugatePrior, GaussianPrior, NIW, NIWParams, NIWStats, SufficientStats};
+use clusters::plotting::{Cluster2D, init_axes2d};
+use clusters::priors::{ConjugatePrior, GaussianPrior, NIW, NIWParams, NIWStats, SufficientStats};
 use statrs::distribution::{InverseWishart, MultivariateNormal};
 
 

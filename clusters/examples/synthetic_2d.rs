@@ -7,13 +7,13 @@ use ndarray_npy::read_npy;
 use plotters::prelude::*;
 use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
-use dpmmsc::clusters::SuperClusterParams;
-use dpmmsc::global::{GlobalActions, GlobalState};
-use dpmmsc::local::{LocalActions, LocalState};
-use dpmmsc::metrics::normalized_mutual_info_score;
-use dpmmsc::options::{FitOptions, ModelOptions};
-use dpmmsc::plotting::{axes_range_from_points, Cluster2D, init_axes2d};
-use dpmmsc::priors::{NIW, NIWParams, NIWStats, SufficientStats};
+use clusters::clusters::SuperClusterParams;
+use clusters::global::{GlobalActions, GlobalState};
+use clusters::local::{LocalActions, LocalState};
+use clusters::metrics::normalized_mutual_info_score;
+use clusters::options::{FitOptions, ModelOptions};
+use clusters::plotting::{axes_range_from_points, Cluster2D, init_axes2d};
+use clusters::priors::{NIW, NIWParams, NIWStats, SufficientStats};
 
 fn plot<S: Storage<f64, Dynamic, Dynamic>>(
     path: &str,
