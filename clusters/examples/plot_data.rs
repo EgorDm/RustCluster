@@ -5,7 +5,7 @@ use plotters::coord::Shift;
 use plotters::coord::types::RangedCoordf64;
 use plotters::prelude::*;
 use clusters::plotting::{Cluster2D, Ellipse, init_axes2d, axes_range_from_points};
-use clusters::stats::row_covariance;
+use clusters::utils::row_covariance;
 
 const PATH: &str = "examples/data/plot/plot_data.png";
 

@@ -6,7 +6,7 @@ use statrs::consts::LN_PI;
 use statrs::distribution::{InverseWishart, MultivariateNormal};
 use statrs::function::gamma::mvlgamma;
 use crate::priors::{ConjugatePrior, GaussianPrior, PriorHyperParams, SufficientStats};
-use crate::stats::row_covariance;
+use crate::stats::Covariance;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NIWStats {
@@ -86,7 +86,7 @@ impl NIWParams {
         data: &Matrix<f64, Dynamic, Dynamic, S>,
     ) -> Self {
         let mu = data.row_mean().transpose();
-        let psi = row_covariance(data);
+        let psi = data.row_cov();
         Self { kappa, mu, nu, psi }
     }
 }
@@ -167,7 +167,7 @@ mod tests {
     use statrs::assert_almost_eq;
     use crate::priors::niw::{NIWParams, NIWStats};
     use crate::priors::{ConjugatePrior, NIW, SufficientStats};
-    use crate::stats::tests::{points1, test_almost_mat};
+    use crate::utils::tests::{points1, test_almost_mat};
 
     fn points0() -> DMatrix<f64> {
         DMatrix::from_row_slice(10, 3, &[

@@ -5,7 +5,7 @@ use crate::clusters::{ClusterParams, SuperClusterParams};
 use crate::global::state::{GlobalState};
 use crate::options::ModelOptions;
 use crate::priors::{GaussianPrior, SufficientStats};
-use crate::stats::each_ref;
+use crate::utils::each_ref;
 
 pub struct GlobalActions<P: GaussianPrior> {
     _phantoms: PhantomData<P>,

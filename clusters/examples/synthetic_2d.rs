@@ -89,8 +89,8 @@ fn main() {
     // LocalState::update_sample_labels(&global_state, &mut local_state, true, &mut rng);
     // LocalState::update_sample_labels_aux(&global_state, &mut local_state, &mut rng);
     //
-    let plot_y = local_state.labels.select_rows(&plot_idx);
-    plot(&format!("examples/data/plot/synthetic_2d/test.png"), &plot_x, plot_y.as_slice(), &global_state.clusters);
+    // let plot_y = local_state.labels.select_rows(&plot_idx);
+    // plot(&format!("examples/data/plot/synthetic_2d/test.png"), &plot_x, plot_y.as_slice(), &global_state.clusters);
     // // End Testing
 
     for i in 0..fit_options.iters {
@@ -107,6 +107,7 @@ fn main() {
             // update_suff_stats_posterior!
             let stats = LocalState::<NIW>::collect_stats(&local_state, global_state.n_clusters());
             GlobalState::update_clusters_post(&mut global_state, stats);
+            // Remove reset bad clusters (concentrated subclusters)
             let bad_clusters = GlobalState::collect_bad_clusters(&mut global_state);
             LocalState::update_reset_clusters(&mut local_state, &bad_clusters, &mut rng);
 
@@ -130,8 +131,8 @@ fn main() {
         println!("Run iteration {} in {:.2?}; k={}, nmi={}", i, elapsed, global_state.n_clusters(), nmi);
 
 
-        let plot_y = local_state.labels.select_rows(&plot_idx);
-        plot(&format!("examples/data/plot/synthetic_2d/step_{:04}.png", i), &plot_x, plot_y.as_slice(), &global_state.clusters);
+        // let plot_y = local_state.labels.select_rows(&plot_idx);
+        // plot(&format!("examples/data/plot/synthetic_2d/step_{:04}.png", i), &plot_x, plot_y.as_slice(), &global_state.clusters);
 
         // calculate NMI
     }
