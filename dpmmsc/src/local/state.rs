@@ -1,5 +1,5 @@
 use std::marker::PhantomData;
-use nalgebra::{DMatrix, DVector};
+use nalgebra::{Dim, DMatrix, DVector, Dynamic, Matrix, Storage};
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
 use statrs::distribution::{Continuous};
@@ -55,12 +55,10 @@ impl<P: GaussianPrior> LocalState<P> {
             }
         }
 
-        let u = ll.row(0).clone_owned();
-
         // Sample labels
         if is_final {
             for (i, row) in ll.row_iter().enumerate() {
-                local.labels[i] = row.iamax_full().1;
+                local.labels[i] = argmax(&row);
             }
         } else {
             normalize_ll(&mut ll);
@@ -151,9 +149,9 @@ impl<P: GaussianPrior> LocalState<P> {
             for l in local.labels.iter_mut() {
                 if *l > k - removed {
                     *l -= 1;
-                    removed += 1;
                 }
             }
+            removed += 1;
         }
     }
 }
@@ -172,4 +170,18 @@ pub fn sample_weighted<R: Rng>(weights: &DMatrix<f64>, labels: &mut DVector<usiz
         let dist = WeightedIndex::new(&row).unwrap();
         labels[i] = dist.sample(rng);
     }
+}
+
+pub fn argmax<R: Dim, C: Dim, S: Storage<f64, R, C>>(
+    a: &Matrix<f64, R, C, S>,
+) -> usize {
+    let mut mv = std::f64::MIN;
+    let mut mi = 0;
+    a.iter().enumerate().for_each(|(i, &v)| {
+        if v > mv {
+            mv = v;
+            mi = i;
+        }
+    });
+    mi
 }

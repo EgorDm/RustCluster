@@ -67,7 +67,9 @@ fn main() {
     model_options.alpha = 100.0;
     model_options.outlier = None;
     let mut fit_options = FitOptions::default();
-    fit_options.init_clusters = 5;
+    fit_options.init_clusters = 10;
+    // fit_options.iters = 20;
+    // fit_options.iters = 40;
 
     let mut rng = StdRng::seed_from_u64(fit_options.seed);
     let mut local_state = LocalState::<NIW>::from_init(x, fit_options.init_clusters, &model_options, &mut rng);
@@ -80,15 +82,15 @@ fn main() {
     GlobalState::update_sample_clusters(&mut global_state, &model_options, &mut rng);
 
 
-    let plot_y = local_state.labels.select_rows(&plot_idx);
-    plot(&format!("examples/data/plot/synthetic_2d/init.png"), &plot_x, plot_y.as_slice(), &global_state.clusters);
+    // let plot_y = local_state.labels.select_rows(&plot_idx);
+    // plot(&format!("examples/data/plot/synthetic_2d/init.png"), &plot_x, plot_y.as_slice(), &global_state.clusters);
 
     // // Testing !!!
     // LocalState::update_sample_labels(&global_state, &mut local_state, true, &mut rng);
     // LocalState::update_sample_labels_aux(&global_state, &mut local_state, &mut rng);
     //
-    // let plot_y = local_state.labels.select_rows(&plot_idx);
-    // plot(&format!("examples/data/plot/synthetic_2d/test.png"), &plot_x, plot_y.as_slice(), &global_state.clusters);
+    let plot_y = local_state.labels.select_rows(&plot_idx);
+    plot(&format!("examples/data/plot/synthetic_2d/test.png"), &plot_x, plot_y.as_slice(), &global_state.clusters);
     // // End Testing
 
     for i in 0..fit_options.iters {
@@ -108,21 +110,16 @@ fn main() {
             let bad_clusters = GlobalState::collect_bad_clusters(&mut global_state);
             LocalState::update_reset_clusters(&mut local_state, &bad_clusters, &mut rng);
 
-            /*if !no_more_splits {
+            if !no_more_splits {
                 let split_idx = GlobalActions::check_and_split(&mut global_state, &model_options, &mut rng);
                 LocalActions::apply_split(&mut local_state, &split_idx, &mut rng);
                 if split_idx.len() > 0 {
                     let stats = LocalState::<NIW>::collect_stats(&local_state, global_state.n_clusters());
-                    for (k, (prim, aux)) in stats.into_iter().enumerate() {
-                        global_state.clusters[k].prim.stats = prim;
-                        for (ki, aux) in aux.into_iter().enumerate() {
-                            global_state.clusters[k].aux[ki].stats = aux;
-                        }
-                    }
+                    GlobalState::update_clusters_post(&mut global_state, stats);
                 }
                 let merge_idx = GlobalActions::check_and_merge(&mut global_state, &model_options, &mut rng);
                 LocalActions::apply_merge(&mut local_state, &merge_idx);
-            }*/
+            }
 
             let removed_idx = GlobalState::update_remove_empty_clusters(&mut global_state, &model_options);
             LocalState::update_remove_clusters(&mut local_state, &removed_idx);
@@ -135,10 +132,6 @@ fn main() {
 
         let plot_y = local_state.labels.select_rows(&plot_idx);
         plot(&format!("examples/data/plot/synthetic_2d/step_{:04}.png", i), &plot_x, plot_y.as_slice(), &global_state.clusters);
-
-        // if i > 2 {
-        //     break;
-        // }
 
         // calculate NMI
     }

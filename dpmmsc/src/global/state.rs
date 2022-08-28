@@ -124,8 +124,8 @@ impl<P: GaussianPrior> GlobalState<P> {
 
         for (k, cluster) in global.clusters.iter().enumerate() {
             if cluster.n_points() > 0
-                || (options.outlier.is_some() && k == 1)
-                || (options.outlier.is_some() && k == 2 && global.n_clusters() == 2)
+                || (options.outlier.is_some() && k == 0)
+                || (options.outlier.is_some() && k == 1 && global.n_clusters() == 2)
             {
                 new_clusters.push(cluster.clone());
             } else {
