@@ -5,7 +5,7 @@ use rand::Rng;
 use statrs::distribution::{Continuous};
 use crate::global::GlobalState;
 use crate::options::ModelOptions;
-use crate::priors::{GaussianPrior, SufficientStats};
+use crate::stats::{GaussianPrior, SufficientStats};
 
 pub type LocalStats<P: GaussianPrior> = Vec<(P::SuffStats, [P::SuffStats; 2])>;
 

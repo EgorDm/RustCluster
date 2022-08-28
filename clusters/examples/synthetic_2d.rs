@@ -13,7 +13,7 @@ use clusters::local::{LocalActions, LocalState};
 use clusters::metrics::normalized_mutual_info_score;
 use clusters::options::{FitOptions, ModelOptions};
 use clusters::plotting::{axes_range_from_points, Cluster2D, init_axes2d};
-use clusters::priors::{NIW, NIWParams, NIWStats, SufficientStats};
+use clusters::stats::{NIW, NIWStats, SufficientStats};
 
 fn plot<S: Storage<f64, Dynamic, Dynamic>>(
     path: &str,

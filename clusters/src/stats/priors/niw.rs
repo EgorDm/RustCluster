@@ -5,14 +5,23 @@ use rand::Rng;
 use statrs::consts::LN_PI;
 use statrs::distribution::{InverseWishart, MultivariateNormal};
 use statrs::function::gamma::mvlgamma;
-use crate::priors::{ConjugatePrior, GaussianPrior, PriorHyperParams, SufficientStats};
-use crate::stats::Covariance;
+use crate::stats::{ConjugatePrior, Covariance, GaussianPrior, PriorHyperParams, SufficientStats};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NIWStats {
     pub n_points: usize,
     pub mean_sum: DVector<f64>,
     pub cov_sum: DMatrix<f64>,
+}
+
+impl Default for NIWStats {
+    fn default() -> Self {
+        Self {
+            n_points: 0,
+            mean_sum: DVector::zeros(1),
+            cov_sum: DMatrix::zeros(1, 1),
+        }
+    }
 }
 
 impl SufficientStats for NIWStats {
@@ -23,14 +32,6 @@ impl SufficientStats for NIWStats {
         let mean_sum = data.row_sum().transpose();
         let cov_sum = (data.transpose() * data).symmetric_part();
         Self { n_points, mean_sum, cov_sum }
-    }
-
-    fn empty() -> Self {
-        Self {
-            n_points: 0,
-            mean_sum: DVector::zeros(1),
-            cov_sum: DMatrix::zeros(1, 1),
-        }
     }
 
     fn n_points(&self) -> usize {
@@ -165,9 +166,8 @@ mod tests {
     use rand::prelude::StdRng;
     use rand::SeedableRng;
     use statrs::assert_almost_eq;
-    use crate::priors::niw::{NIWParams, NIWStats};
-    use crate::priors::{ConjugatePrior, NIW, SufficientStats};
-    use crate::utils::tests::{points1, test_almost_mat};
+    use crate::stats::{ConjugatePrior, NIW, NIWParams, NIWStats, SufficientStats};
+    use crate::stats::tests::{points1, test_almost_mat};
 
     fn points0() -> DMatrix<f64> {
         DMatrix::from_row_slice(10, 3, &[

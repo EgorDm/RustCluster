@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use rand::Rng;
 use crate::local::state::LocalState;
-use crate::priors::GaussianPrior;
+use crate::stats::GaussianPrior;
 
 pub struct LocalActions<P: GaussianPrior> {
     _phantoms: PhantomData<P>

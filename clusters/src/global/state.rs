@@ -5,7 +5,7 @@ use statrs::distribution::{Dirichlet};
 use crate::clusters::{ClusterParams, SuperClusterParams};
 use crate::local::LocalStats;
 use crate::options::{ModelOptions, OutlierRemoval};
-use crate::priors::{GaussianPrior, SufficientStats};
+use crate::stats::GaussianPrior;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GlobalState<P: GaussianPrior> {
@@ -26,7 +26,7 @@ impl<P: GaussianPrior> GlobalState<P> {
         for k in 0..n_clusters + options.outlier.is_some() as usize {
             let (prior, stats) = match (k, &options.outlier) {
                 (0, Some(OutlierRemoval { dist, .. })) => (dist, data_stats.clone()), // TODO: use data stats
-                _ => (&options.data_dist, P::SuffStats::empty())
+                _ => (&options.data_dist, P::SuffStats::default())
             };
 
             let dist = P::sample(prior, rng);

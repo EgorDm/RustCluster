@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::ops::Add;
 use nalgebra::{Dynamic, Matrix, Storage};
 use rand::Rng;
 use statrs::distribution::MultivariateNormal;
@@ -32,12 +33,10 @@ pub trait PriorHyperParams {
     fn default(dim: usize) -> Self;
 }
 
-pub trait SufficientStats: Sized {
+pub trait SufficientStats: Sized + Default {
     fn from_data<S: Storage<f64, Dynamic, Dynamic>>(
         data: &Matrix<f64, Dynamic, Dynamic, S>,
     ) -> Self;
-
-    fn empty() -> Self;
 
     fn n_points(&self) -> usize;
 

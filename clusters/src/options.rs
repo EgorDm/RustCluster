@@ -1,4 +1,4 @@
-use crate::priors::{GaussianPrior, PriorHyperParams};
+use crate::stats::{GaussianPrior, PriorHyperParams};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct OutlierRemoval<P: GaussianPrior> {

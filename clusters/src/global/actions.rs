@@ -4,7 +4,7 @@ use statrs::function::gamma::ln_gamma;
 use crate::clusters::{ClusterParams, SuperClusterParams};
 use crate::global::state::{GlobalState};
 use crate::options::ModelOptions;
-use crate::priors::{GaussianPrior, SufficientStats};
+use crate::stats::{GaussianPrior, SufficientStats};
 use crate::utils::each_ref;
 
 pub struct GlobalActions<P: GaussianPrior> {
@@ -141,7 +141,7 @@ impl<P: GaussianPrior> GlobalActions<P> {
                     options.alpha, options.burnout_period, rng,
                 );
                 global.clusters[ki] = cluster;
-                global.clusters[kj].prim.stats = P::SuffStats::empty();
+                global.clusters[kj].prim.stats = P::SuffStats::default();
                 global.clusters[kj].splittable = false;
                 decisions.push((ki, kj));
             }

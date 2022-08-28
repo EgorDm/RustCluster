@@ -1,4 +1,3 @@
-pub mod priors;
 pub mod utils;
 pub mod clusters;
 pub mod model;
