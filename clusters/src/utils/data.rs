@@ -60,8 +60,34 @@ pub fn bincount<T: Copy + Hash + Eq>(data: &[T]) -> HashMap<T, usize> {
     counts
 }
 
+pub fn row_normalize_log_weights(
+    weights: &mut DMatrix<f64>
+) {
+    for mut row in weights.row_iter_mut() {
+        let max = row.max();
+        for x in row.iter_mut() {
+            *x = (*x - max).exp();
+        }
+    }
+}
+
+pub fn col_normalize_log_weights(
+    weights: &mut DMatrix<f64>
+) {
+    for mut col in weights.column_iter_mut() {
+        let max = col.max();
+        for x in col.iter_mut() {
+            *x = (*x - max).exp();
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use nalgebra::DMatrix;
+    use num_traits::real::Real;
+    use crate::stats::tests::test_almost_mat;
+
     #[test]
     fn test_unique_with_indices() {
         let data = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 1];
@@ -77,5 +103,34 @@ mod tests {
         let mut bincounts: Vec<_> = counts.into_iter().collect();
         bincounts.sort();
         assert_eq!(bincounts, vec![(1, 2), (2, 2), (3, 2), (4, 2), (5, 2)]);
+    }
+
+    #[test]
+    fn test_normalize_log_weights() {
+        let mut weights = DMatrix::from_row_slice(3, 3, &[
+            1.0f64, 2.0, 4.0,
+            1.0, 2.0, 4.0,
+            1.0, 2.0, 4.0,
+        ]);
+        weights.iter_mut().for_each(|x| *x = x.ln());
+        super::row_normalize_log_weights(&mut weights);
+        test_almost_mat(&weights, &DMatrix::from_row_slice(3, 3, &[
+            0.25, 0.5, 1.0,
+            0.25, 0.5, 1.0,
+            0.25, 0.5, 1.0,
+        ]), 1e-4);
+
+        let mut weights = DMatrix::from_row_slice(3, 3, &[
+            1.0f64, 2.0, 4.0,
+            1.0, 2.0, 4.0,
+            1.0, 2.0, 4.0,
+        ]);
+        weights.iter_mut().for_each(|x| *x = x.ln());
+        super::col_normalize_log_weights(&mut weights);
+        test_almost_mat(&weights, &DMatrix::from_row_slice(3, 3, &[
+            1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0,
+        ]), 1e-4);
     }
 }

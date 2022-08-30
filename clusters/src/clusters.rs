@@ -3,7 +3,7 @@ use nalgebra::DVector;
 use rand::distributions::Distribution;
 use rand::Rng;
 use statrs::distribution::{Dirichlet, MultivariateNormal};
-use crate::stats::priors::{GaussianPrior, SufficientStats};
+use crate::stats::{GaussianPrior, SufficientStats};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SuperClusterParams<P: GaussianPrior> {

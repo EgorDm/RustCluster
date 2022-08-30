@@ -5,6 +5,7 @@ use statrs::distribution::{Dirichlet};
 use crate::clusters::{ClusterParams, SuperClusterParams};
 use crate::local::LocalStats;
 use crate::options::{ModelOptions, OutlierRemoval};
+use crate::stats::dp::stick_breaking_sample;
 use crate::stats::GaussianPrior;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -134,23 +135,5 @@ impl<P: GaussianPrior> GlobalState<P> {
         }
         global.clusters = new_clusters;
         removed_cluster_idx
-    }
-}
-
-pub fn stick_breaking_sample(counts: &[f64], alpha: f64, rng: &mut impl Rng) -> Vec<f64> {
-    let cluster_weights = if counts.len() > 1 {
-        let dir = Dirichlet::new(DVector::from_row_slice(counts)).unwrap();
-        dir.sample(rng)
-    } else {
-        DVector::from_element(1, 1.0)
-    } * (1.0 - alpha);
-
-    if alpha != 0.0 {
-        let mut weights = vec![0f64; counts.len() + 1];
-        weights[1..counts.len() + 1].copy_from_slice(cluster_weights.as_slice());
-        weights[0] = alpha;
-        weights
-    } else {
-        cluster_weights.as_slice().to_vec()
     }
 }

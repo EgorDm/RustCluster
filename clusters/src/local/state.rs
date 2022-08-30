@@ -6,6 +6,7 @@ use statrs::distribution::{Continuous};
 use crate::global::GlobalState;
 use crate::options::ModelOptions;
 use crate::stats::{GaussianPrior, SufficientStats};
+use crate::utils::row_normalize_log_weights;
 
 pub type LocalStats<P: GaussianPrior> = Vec<(P::SuffStats, [P::SuffStats; 2])>;
 
@@ -61,7 +62,7 @@ impl<P: GaussianPrior> LocalState<P> {
                 local.labels[i] = argmax(&row);
             }
         } else {
-            normalize_ll(&mut ll);
+            row_normalize_log_weights(&mut ll);
             sample_weighted(&ll, &mut local.labels, rng);
         }
     }
@@ -83,7 +84,7 @@ impl<P: GaussianPrior> LocalState<P> {
         }
 
         // Sample labels
-        normalize_ll(&mut ll);
+        row_normalize_log_weights(&mut ll);
         sample_weighted(&ll, &mut local.labels_aux, rng);
     }
 
@@ -91,11 +92,9 @@ impl<P: GaussianPrior> LocalState<P> {
         local: &LocalState<P>,
         n_clusters: usize,
     ) -> LocalStats<P> {
-        let mut stats = Vec::with_capacity(n_clusters);
-        for k in 0..n_clusters {
-            stats.push(Self::collect_stats_cluster(local, k));
-        }
-        stats
+        (0..n_clusters)
+            .map(|k| Self::collect_stats_cluster(local, k))
+            .collect()
     }
 
     pub fn collect_stats_cluster(
@@ -153,14 +152,6 @@ impl<P: GaussianPrior> LocalState<P> {
             }
             removed += 1;
         }
-    }
-}
-
-
-pub fn normalize_ll(ll: &mut DMatrix<f64>) {
-    for mut row in ll.row_iter_mut() {
-        let row_max = row.max();
-        row.iter_mut().for_each(|x| *x = (*x - row_max).exp());
     }
 }
 

@@ -75,7 +75,6 @@ impl<
     }
 }
 
-#[rustfmt::skip]
 #[cfg(test)]
 pub mod tests {
     use nalgebra::{DefaultAllocator, Dim, DMatrix, OMatrix};
