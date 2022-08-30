@@ -77,10 +77,10 @@ impl<P: GaussianPrior> GlobalState<P> {
 
             cluster.weights = weights;
 
-            cluster.update_history(
+            cluster.ll_history.push(
                 cluster.aux.iter().map(|c| c.marginal_log_likelihood()).sum::<f64>()
             );
-            cluster.splittable = cluster.converged(options.burnout_period);
+            cluster.splittable = cluster.ll_history.converged(options.burnout_period);
             points_count.push(cluster.n_points() as f64);
         }
 
@@ -106,7 +106,7 @@ impl<P: GaussianPrior> GlobalState<P> {
         let mut bad_clusters = Vec::new();
         for (k, cluster) in global.clusters.iter_mut().enumerate() {
             if cluster.aux.iter().any(|c| c.n_points() == 0) {
-                cluster.ll_history = vec![f64::NEG_INFINITY; cluster.ll_history.len()];
+                cluster.ll_history.clear();
                 cluster.splittable = false;
                 bad_clusters.push(k);
             }
