@@ -1,40 +1,20 @@
 #![allow(clippy::ptr_arg)]
+
 use std::collections::HashMap;
+use std::hash::Hash;
 use num_traits::{FromPrimitive, PrimInt};
 use num_traits::real::Real;
 use simba::scalar::SupersetOf;
+use crate::utils::{bincount, unique_with_indices};
 
-fn unique_with_indices<T: PrimInt>(data: &[T]) -> (Vec<T>, Vec<usize>) {
-    let mut unique = data.to_vec();
-    unique.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    unique.dedup();
-
-    let mut index = HashMap::with_capacity(unique.len());
-    for (i, u) in unique.iter().enumerate() {
-        index.insert(u.to_i64().unwrap(), i);
-    }
-
-    let mut unique_index = Vec::with_capacity(data.len());
-    for idx in 0..data.len() {
-        unique_index.push(index[&data.get(idx).unwrap().to_i64().unwrap()]);
-    }
-
-    (unique, unique_index)
-}
-
-pub fn contingency_matrix<T: PrimInt>(
+pub fn contingency_matrix<T: Copy + Hash + Eq + Ord>(
     labels_true: &[T],
     labels_pred: &[T],
 ) -> Vec<Vec<usize>> {
-    let (classes, class_idx) = unique_with_indices(labels_true);
-    let (clusters, cluster_idx) = unique_with_indices(labels_pred);
+    let (classes, class_idx) = unique_with_indices(labels_true, true);
+    let (clusters, cluster_idx) = unique_with_indices(labels_pred, true);
 
-    let mut contingency_matrix = Vec::with_capacity(classes.len());
-
-    for _ in 0..classes.len() {
-        contingency_matrix.push(vec![0; clusters.len()]);
-    }
-
+    let mut contingency_matrix = vec![vec![0; clusters.len()]; classes.len()];
     for i in 0..class_idx.len() {
         contingency_matrix[class_idx[i]][cluster_idx[i]] += 1;
     }
@@ -42,20 +22,14 @@ pub fn contingency_matrix<T: PrimInt>(
     contingency_matrix
 }
 
-pub fn entropy<T: PrimInt + FromPrimitive>(data: &[T]) -> Option<f64> {
-    let mut bincounts = HashMap::with_capacity(data.len());
-
-    for e in data.iter() {
-        let k = e.to_i64().unwrap();
-        bincounts.insert(k, bincounts.get(&k).unwrap_or(&0.0) + 1.0);
-    }
+pub fn entropy<T: Copy + Hash + Eq>(data: &[T]) -> Option<f64> {
+    let bincounts = bincount(data);
+    let sum = bincounts.values().cloned().sum::<usize>() as f64;
 
     let mut entropy = 0.0;
-    let sum: f64 = bincounts.values().cloned().sum();
-
     for &c in bincounts.values() {
-        if c > 0.0 {
-            let pi = c;
+        if c > 0 {
+            let pi = c as f64;
             entropy -= (pi / sum) * (pi.ln() - sum.ln());
         }
     }
@@ -63,17 +37,19 @@ pub fn entropy<T: PrimInt + FromPrimitive>(data: &[T]) -> Option<f64> {
     Some(entropy)
 }
 
-pub fn mutual_info_score<T: PrimInt + FromPrimitive>(contingency: &[Vec<usize>]) -> f64 {
+pub fn mutual_info_score(
+    contingency: &[Vec<usize>]
+) -> f64 {
     let mut contingency_sum = 0;
     let mut pi = vec![0; contingency.len()];
     let mut pj = vec![0; contingency[0].len()];
     let (mut nzx, mut nzy, mut nz_val) = (Vec::new(), Vec::new(), Vec::new());
 
-    for r in 0..contingency.len() {
-        for (c, pj_c) in pj.iter_mut().enumerate().take(contingency[0].len()) {
+    for r in 0..pi.len() {
+        for c in 0..pj.len() {
             contingency_sum += contingency[r][c];
             pi[r] += contingency[r][c];
-            *pj_c += contingency[r][c];
+            pj[c] += contingency[r][c];
             if contingency[r][c] > 0 {
                 nzx.push(r);
                 nzy.push(c);
@@ -106,21 +82,18 @@ pub fn mutual_info_score<T: PrimInt + FromPrimitive>(contingency: &[Vec<usize>])
         .collect();
 
     let mut result = 0.0;
-
     for i in 0..log_outer.len() {
-        result += (contingency_nm[i] * (log_contingency_nm[i] - contingency_sum_ln))
-            + contingency_nm[i] * log_outer[i]
+        result += (contingency_nm[i] * (log_contingency_nm[i] - contingency_sum_ln)) + contingency_nm[i] * log_outer[i]
     }
 
     result.max(0.0)
 }
 
-pub fn normalized_mutual_info_score<T: PrimInt + FromPrimitive>(
+pub fn normalized_mutual_info_score<T: Copy + Hash + Eq + Ord>(
     labels_true: &[T],
     labels_pred: &[T],
 ) -> f64 {
-    let mi = mutual_info_score::<usize>(&contingency_matrix(labels_true, labels_pred));
-
+    let mi = mutual_info_score(&contingency_matrix(labels_true, labels_pred));
     if mi == 0.0 {
         return 0.0;
     }
@@ -158,7 +131,7 @@ mod tests {
     fn mutual_info_score_test() {
         let v1 = vec![0, 0, 1, 1, 2, 0, 4];
         let v2 = vec![1, 0, 0, 0, 0, 1, 0];
-        let s: f64 = mutual_info_score::<usize>(&contingency_matrix(&v1, &v2));
+        let s: f64 = mutual_info_score(&contingency_matrix(&v1, &v2));
 
         assert_almost_eq!(0.3254, s, 1e-4);
     }

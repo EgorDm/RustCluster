@@ -2,7 +2,7 @@ use criterion::{criterion_group, Criterion};
 use nalgebra::DMatrix;
 use clusters::stats::Covariance;
 
-fn covariance(c: &mut Criterion) {
+fn bench_covariance(c: &mut Criterion) {
     let a = DMatrix::<f64>::new_random(100, 100);
     c.bench_function("row_cov", move |bh| bh.iter(|| a.row_cov()));
 
@@ -12,5 +12,5 @@ fn covariance(c: &mut Criterion) {
 
 criterion_group!(
     stats,
-    covariance,
+    bench_covariance,
 );
