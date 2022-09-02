@@ -15,14 +15,14 @@ fn bench_sampling(c: &mut Criterion) {
     let data: DVector<f64> = DVector::new_random(64);
     let src = data.as_slice();
 
-    let mut rng = rand::rngs::SmallRng::from_seed([0; 32]);
+    let mut rng = SmallRng::from_seed([0; 32]);
     c.bench_function("reservoir_sampling_weighted_single", move |bh| bh.iter(|| {
         let mut dst = [0; 1];
         reservoir_sampling_weighted(&mut rng, src.iter().cloned(), &mut dst);
         dst
     }));
 
-    let mut rng = rand::rngs::SmallRng::from_seed([0; 32]);
+    let mut rng = SmallRng::from_seed([0; 32]);
     c.bench_function("reservoir_sampling_weighted_multiple", move |bh| bh.iter(|| {
         let mut dst = [0; 1];
         for _ in 0..1000 {
@@ -31,14 +31,14 @@ fn bench_sampling(c: &mut Criterion) {
         dst
     }));
 
-    let mut rng = rand::rngs::SmallRng::from_seed([0; 32]);
+    let mut rng = SmallRng::from_seed([0; 32]);
     c.bench_function("statrs_weighted_sampling_single", move |bh| bh.iter(|| {
         let mut dst = [0; 1];
         replacement_sampling_weighted(&mut rng, src.iter().cloned(), &mut dst);
         dst
     }));
 
-    let mut rng = rand::rngs::SmallRng::from_seed([0; 32]);
+    let mut rng = SmallRng::from_seed([0; 32]);
     c.bench_function("statrs_weighted_sampling_multiple", move |bh| bh.iter(|| {
         let mut dst = [0; 1000];
         replacement_sampling_weighted(&mut rng, src.iter().cloned(), &mut dst);

@@ -28,9 +28,9 @@ impl SufficientStats for NIWStats {
     fn from_data<S: Storage<f64, Dynamic, Dynamic>>(
         data: &Matrix<f64, Dynamic, Dynamic, S>,
     ) -> Self {
-        let n_points = data.nrows();
-        let mean_sum = data.row_sum().transpose();
-        let cov_sum = (data.transpose() * data).symmetric_part();
+        let n_points = data.ncols();
+        let mean_sum = data.column_sum();
+        let cov_sum = (data * data.transpose()).symmetric_part();
         Self { n_points, mean_sum, cov_sum }
     }
 
@@ -86,8 +86,8 @@ impl NIWParams {
         nu: f64,
         data: &Matrix<f64, Dynamic, Dynamic, S>,
     ) -> Self {
-        let mu = data.row_mean().transpose();
-        let psi = data.row_cov();
+        let mu = data.column_mean();
+        let psi = data.col_cov();
         Self { kappa, mu, nu, psi }
     }
 }
@@ -181,7 +181,7 @@ mod tests {
             0.9132, 0.9476, 0.0753,
             0.1983, 0.2940, 0.6786,
             0.0247, 0.4744, 0.8099,
-        ])
+        ]).transpose()
     }
 
     #[test]

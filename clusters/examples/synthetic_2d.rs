@@ -5,7 +5,7 @@ use nalgebra::{DMatrix, DVector, Dynamic, Matrix, Storage};
 use ndarray::{Array1, Array2};
 use ndarray_npy::read_npy;
 use plotters::prelude::*;
-use rand::prelude::StdRng;
+use rand::prelude::{SmallRng, StdRng};
 use rand::{Rng, SeedableRng};
 use clusters::clusters::SuperClusterParams;
 use clusters::global::{GlobalActions, GlobalState};
@@ -26,7 +26,7 @@ fn plot<S: Storage<f64, Dynamic, Dynamic>>(
 
     plot_ctx.draw_series(
         points
-            .row_iter()
+            .column_iter()
             .zip(labels.iter())
             .map(|(row, label)|
                 Circle::new((row[0], row[1]), 2, Palette99::pick(*label).mix(0.9).filled())),
@@ -52,16 +52,17 @@ fn main() {
     println!("Hello, world!");
 
     let x_data: Array2<f64> = read_npy("examples/data/x.npy").unwrap();
-    let x = DMatrix::from_row_slice(x_data.nrows(), x_data.ncols(), &x_data.as_slice().unwrap());
+    let x = DMatrix::from_row_slice(x_data.nrows(), x_data.ncols(), &x_data.as_slice().unwrap()).transpose();
     let y_data: Array1<i64> = read_npy("examples/data/y.npy").unwrap();
     let y = DVector::from_row_slice(&y_data.as_slice().unwrap());
-    let y = y.map(|x| x as usize).into_owned();
+    let y = y.map(|x| x as usize).into_owned().transpose();
 
+    // let mut rng = SmallRng::seed_from_u64(42);
     let mut rng = StdRng::seed_from_u64(42);
-    let plot_idx: Vec<usize> = (0..1000).map(|_| rng.gen_range(0..x.nrows())).collect();
-    let plot_x = x.select_rows(&plot_idx);
+    let plot_idx: Vec<usize> = (0..1000).map(|_| rng.gen_range(0..x.ncols())).collect();
+    let plot_x = x.select_columns(&plot_idx);
 
-    let dim = x.ncols();
+    let dim = x.nrows();
 
     let mut model_options = ModelOptions::<NIW>::default(dim);
     model_options.alpha = 100.0;
@@ -72,6 +73,7 @@ fn main() {
     // fit_options.iters = 40;
 
     let mut rng = StdRng::seed_from_u64(fit_options.seed);
+    // let mut rng = SmallRng::seed_from_u64(42);
     let mut local_state = LocalState::<NIW>::from_init(x, fit_options.init_clusters, &model_options, &mut rng);
     let data_stats = NIWStats::from_data(&local_state.data);
     let mut global_state = GlobalState::<NIW>::from_init(&data_stats, fit_options.init_clusters, &model_options, &mut rng);
@@ -89,7 +91,7 @@ fn main() {
     // LocalState::update_sample_labels(&global_state, &mut local_state, true, &mut rng);
     // LocalState::update_sample_labels_aux(&global_state, &mut local_state, &mut rng);
     //
-    // let plot_y = local_state.labels.select_rows(&plot_idx);
+    // let plot_y = local_state.labels.select_columns(&plot_idx);
     // plot(&format!("examples/data/plot/synthetic_2d/test.png"), &plot_x, plot_y.as_slice(), &global_state.clusters);
     // // End Testing
 
@@ -131,9 +133,8 @@ fn main() {
         println!("Run iteration {} in {:.2?}; k={}, nmi={}", i, elapsed, global_state.n_clusters(), nmi);
 
 
-        // let plot_y = local_state.labels.select_rows(&plot_idx);
+        // let plot_y = local_state.labels.select_columns(&plot_idx);
         // plot(&format!("examples/data/plot/synthetic_2d/step_{:04}.png", i), &plot_x, plot_y.as_slice(), &global_state.clusters);
-
         // calculate NMI
     }
 

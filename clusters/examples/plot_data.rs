@@ -5,16 +5,16 @@ use plotters::coord::Shift;
 use plotters::coord::types::RangedCoordf64;
 use plotters::prelude::*;
 use clusters::plotting::{Cluster2D, Ellipse, init_axes2d, axes_range_from_points};
-use clusters::utils::row_covariance;
+use clusters::stats::Covariance;
 
 const PATH: &str = "examples/data/plot/plot_data.png";
 
 fn main() {
     let x_data: Array2<f64> = read_npy("examples/data/x.npy").unwrap();
-    let x = DMatrix::from_row_slice(x_data.nrows(), x_data.ncols(), &x_data.as_slice().unwrap());
+    let x = DMatrix::from_row_slice(x_data.nrows(), x_data.ncols(), &x_data.as_slice().unwrap()).transpose();
     let y_data: Array1<i64> = read_npy("examples/data/y.npy").unwrap();
     let y = DVector::from_row_slice(&y_data.as_slice().unwrap());
-    let y = y.map(|x| x as usize).into_owned();
+    let y = y.map(|x| x as usize).into_owned().transpose();
 
     let (mut range_x, mut range_y) = axes_range_from_points(&x);
     let root: DrawingArea<BitMapBackend, Shift> = BitMapBackend::new(PATH, (1024, 768)).into_drawing_area();
@@ -23,7 +23,7 @@ fn main() {
     // Scatter plot points
     plot_ctx.draw_series(
         x
-            .row_iter()
+            .column_iter()
             .zip(y.iter())
             .map(|(row, label)|
                 Circle::new((row[0], row[1]), 2, Palette99::pick(*label).mix(0.4).filled())
@@ -32,10 +32,10 @@ fn main() {
 
     for k in 0..7 {
         let idx = y.iter().enumerate().filter_map(|(i, &y)| if y == k { Some(i) } else { None }).collect::<Vec<usize>>();
-        let points = x.select_rows(&idx);
+        let points = x.select_columns(&idx);
 
-        let mu = points.row_mean().transpose().into_owned();
-        let cov = row_covariance(&points);
+        let mu = points.column_mean().into_owned();
+        let cov = points.col_cov();
 
         plot_ctx.draw_series(
             Cluster2D::from_mat(

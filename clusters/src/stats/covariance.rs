@@ -107,13 +107,13 @@ pub mod tests {
             0.2485, 0.0035, 0.7435,
             0.3800, 0.3961, 0.7620,
             0.4416, 0.1462, 0.1969,
-        ])
+        ]).transpose()
     }
 
     #[test]
     fn test_covariance() {
         test_almost_mat(
-            &points1().row_cov(),
+            &points1().col_cov(),
             &DMatrix::from_row_slice(3, 3, &[
                 0.0549, 0.0115, 0.0008,
                 0.0115, 0.1061, 0.0116,
@@ -123,7 +123,7 @@ pub mod tests {
         );
 
         test_almost_mat(
-            &points1().transpose().col_cov(),
+            &points1().transpose().row_cov(),
             &DMatrix::from_row_slice(3, 3, &[
                 0.0549, 0.0115, 0.0008,
                 0.0115, 0.1061, 0.0116,

@@ -1,16 +1,17 @@
 use nalgebra::{DMatrix, DVector};
 use ndarray::AssignElem;
 use num_traits::real::Real;
-use rand::prelude::*;
 use plotters::prelude::*;
+use rand::prelude::{Distribution, StdRng};
+use rand::SeedableRng;
 use clusters::plotting::{Cluster2D, init_axes2d};
-use clusters::priors::{ConjugatePrior, GaussianPrior, NIW, NIWParams, NIWStats, SufficientStats};
+use clusters::stats::{ConjugatePrior, GaussianPrior, NIW, NIWParams, NIWStats, SufficientStats};
 use statrs::distribution::{InverseWishart, MultivariateNormal};
 
 
 fn main() {
-    // plot_points_dist();
-    // plot_niw_dist();
+    plot_points_dist();
+    plot_niw_dist();
     plot_niw_chain();
 }
 
@@ -110,16 +111,16 @@ fn plot_niw_chain() {
 
     for i in 0..5 {
         let mut dist = NIW::sample(&dist_params, &mut rng);
-        let mut points = DMatrix::<f64>::zeros(500, 2);
-        for mut point in points.row_iter_mut() {
-            point.copy_from(&dist.sample(&mut rng).transpose());
+        let mut points = DMatrix::<f64>::zeros(2, 500);
+        for mut point in points.column_iter_mut() {
+            point.copy_from(&dist.sample(&mut rng));
         }
 
         let stats = NIWStats::from_data(&points);
         dist_params = NIW::posterior(&dist_params, &stats);
 
         plot_ctx.draw_series(
-            points.row_iter()
+            points.column_iter()
                 .map(|x| Circle::new((x[0], x[1]), 2, Palette99::pick(i + 3).mix(0.8).filled()))
         ).unwrap();
 

@@ -106,11 +106,11 @@ pub fn axes_range_from_points<S: Storage<f64, Dynamic, Dynamic>>(
 ) -> (Range<f64>, Range<f64>) {
     let (mut min_x, mut max_x) = (f64::INFINITY, f64::NEG_INFINITY);
     let (mut min_y, mut max_y) = (f64::INFINITY, f64::NEG_INFINITY);
-    for row in points.row_iter() {
-        min_x = min_x.min(row[0]);
-        max_x = max_x.max(row[0]);
-        min_y = min_y.min(row[1]);
-        max_y = max_y.max(row[1]);
+    for col in points.column_iter() {
+        min_x = min_x.min(col[0]);
+        max_x = max_x.max(col[0]);
+        min_y = min_y.min(col[1]);
+        max_y = max_y.max(col[1]);
     }
     (min_x..max_x, min_y..max_y)
 }
