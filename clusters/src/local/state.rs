@@ -7,8 +7,8 @@ use rand::Rng;
 use statrs::distribution::{Continuous};
 use crate::global::GlobalState;
 use crate::options::ModelOptions;
-use crate::stats::{GaussianPrior, SufficientStats};
-use crate::utils::{col_normalize_log_weights, row_normalize_log_weights};
+use crate::stats::{ContinuousBatchwise, GaussianPrior, SufficientStats};
+use crate::utils::{col_normalize_log_weights, col_scatter, row_normalize_log_weights};
 
 
 pub type LocalStats<P: GaussianPrior> = Vec<(P::SuffStats, [P::SuffStats; 2])>;
@@ -57,9 +57,12 @@ impl<P: GaussianPrior> LocalState<P> {
         let ln_weights = global.weights.iter().map(|w| w.ln()).collect::<Vec<_>>();
         let mut ll = DMatrix::zeros(global.clusters.len(), local.n_points());
         for (k, cluster) in global.clusters.iter().enumerate() {
-            for (i, point) in local.data.column_iter().enumerate() {
-                ll[(k, i)] = cluster.prim.dist.ln_pdf(&point.clone_owned()) + ln_weights[k];
-            }
+            ll.row_mut(k).copy_from_slice(
+                cluster.prim.dist.batchwise_ln_pdf(local.data.clone_owned()).as_slice()
+            );
+        }
+        for (k, mut row) in ll.row_iter_mut().enumerate() {
+            row.apply(|x| *x += ln_weights[k]);
         }
 
         // Sample labels
@@ -78,15 +81,35 @@ impl<P: GaussianPrior> LocalState<P> {
         local: &mut LocalState<P>,
         rng: &mut R,
     ) {
+        // Compute number of points per cluster
+        let mut counts = vec![0usize; global.clusters.len() * 2];
+        for (&prim, &aux) in izip!(&local.labels, &local.labels_aux) {
+            counts[prim * 2 + aux] += 1;
+        }
+
+        // Split data points into contiguous blocks
+        let dim = local.data.nrows();
+        let mut blocks: Vec<_> = counts.iter().map(|&n| DMatrix::zeros(dim, n)).collect();
+        let mut block_ids: Vec<_> = counts.iter().map(|&n| vec![0; n]).collect();
+        let mut offsets = vec![0usize; counts.len()];
+        for (i, (&prim, &aux, point)) in izip!(&local.labels, &local.labels_aux, local.data.column_iter()).enumerate() {
+            let block_id = prim * 2 + aux;
+            let idx = &mut offsets[block_id];
+            blocks[block_id].column_mut(*idx).copy_from_slice(point.as_slice());
+            block_ids[block_id][*idx] = i;
+            *idx += 1;
+        }
+
+        // Sample pdf for each block and scatter them back in order to local.data
         let mut ll = DMatrix::zeros(2, local.n_points());
-        for (k, cluster) in global.clusters.iter().enumerate() {
-            let ln_weights = cluster.weights.iter().map(|w| w.ln()).collect::<Vec<_>>();
-            for (i, _) in local.labels.iter().enumerate().filter(|(_, &label)| label == k) {
-                let point = local.data.column(i).clone_owned();
-                for a in 0..2 {
-                    ll[(a, i)] = cluster.aux[a].dist.ln_pdf(&point) + ln_weights[a];
-                }
-            }
+        for (block_id, block) in blocks.into_iter().enumerate() {
+            let (prim, aux) = (block_id / 2, block_id % 2);
+            let probs = global.clusters[prim].aux[aux].dist.batchwise_ln_pdf(block).transpose();
+            col_scatter(
+                &mut ll.row_mut(aux),
+                &block_ids[block_id],
+                &probs
+            );
         }
 
         // Sample labels
