@@ -1,6 +1,6 @@
 use std::collections::hash_map::Entry;
 use std::mem::MaybeUninit;
-use nalgebra::{DefaultAllocator, Dim, DMatrix, Dynamic, Matrix, OMatrix, OVector, Storage, StorageMut, U1, Vector};
+use nalgebra::{DefaultAllocator, Dim, DMatrix, Dynamic, Matrix, OMatrix, OVector, Scalar, Storage, StorageMut, U1, Vector};
 use std::collections::HashMap;
 use num_traits::{FromPrimitive, One, PrimInt};
 use std::hash::Hash;
@@ -145,6 +145,29 @@ pub fn col_broadcast_sub<Real, R, C, SM, SV>(
     out
 }
 
+pub fn col_scatter<T, R, CO, CI, SO, SI>(
+    out: &mut Matrix<T, R, CO, SO>,
+    indices: &[usize],
+    values: &Matrix<T, R, CI, SI>,
+)
+    where
+        T: Scalar,
+        R: Dim,
+        CO: Dim,
+        CI: Dim,
+        DefaultAllocator: Allocator<T, R, CO>,
+        DefaultAllocator: Allocator<T, R, CI>,
+        SO: StorageMut<T, R, CO>,
+        SI: Storage<T, R, CI>,
+{
+    assert_eq!(out.nrows(), values.nrows());
+    assert_eq!(values.ncols(), indices.len());
+
+    for (i, &idx) in indices.iter().enumerate() {
+        out.column_mut(idx).copy_from(&values.column(i));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use nalgebra::{DMatrix, DVector};
@@ -216,7 +239,6 @@ mod tests {
             0.0, 3.0, 295.0,
             1.0,  4.0, 395.0,
         ]);
-        println!("{} {}", actual, expected);
 
         assert!(actual == expected);
     }
@@ -238,8 +260,32 @@ mod tests {
             0.0, 3.0, 295.0,
             1.0,  4.0, 395.0,
         ]);
-        println!("{} {}", actual, expected);
 
         assert!(actual == expected);
+    }
+
+    #[test]
+    fn test_col_scatter() {
+        let mut out = DMatrix::<f64>::from_vec(3, 4, vec![
+            1.0, 5.0, 100.0,
+            2.0, 6.0, 200.0,
+            3.0, 7.0, 300.0,
+            4.0, 8.0, 400.0,
+        ]);
+        let indices = vec![0, 2, 3];
+        let values = DMatrix::<f64>::from_vec(3, 3, vec![
+            1.0, 2.0, 3.0,
+            4.0, 5.0, 6.0,
+            7.0, 8.0, 9.0,
+        ]);
+        super::col_scatter(&mut out, &indices, &values);
+        let expected = DMatrix::<f64>::from_vec(3, 4, vec![
+            1.0, 2.0, 3.0,
+            2.0, 6.0, 200.0,
+            4.0, 5.0, 6.0,
+            7.0, 8.0, 9.0,
+        ]);
+        println!("{} {}", out, expected);
+        test_almost_mat(&out, &expected, 1e-10);
     }
 }
