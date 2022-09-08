@@ -4,7 +4,7 @@ use rand::distributions::{Standard, Distribution, WeightedIndex};
 use rand::Rng;
 use rand::SeedableRng;
 use rand::rngs::SmallRng;
-use clusters::utils::{replacement_sampling_weighted, reservoir_sampling_weighted, unique_with_indices};
+use clusters::utils::{col_broadcast_add, replacement_sampling_weighted, reservoir_sampling_weighted, unique_with_indices};
 
 fn bench_unique_with_indices(c: &mut Criterion) {
     let values: Vec<i32> = rand::thread_rng().sample_iter(Standard).take(10000).collect();
@@ -46,8 +46,16 @@ fn bench_sampling(c: &mut Criterion) {
     }));
 }
 
+fn bench_broadcast(c: &mut Criterion) {
+    let mat = DMatrix::<f64>::new_random(100, 100);
+    let vec = DVector::<f64>::new_random(100);
+
+    c.bench_function("col_broadcast_add", |bh| bh.iter(|| col_broadcast_add(mat.clone(), &vec)));
+}
+
 criterion_group!(
     utils,
     bench_unique_with_indices,
     bench_sampling,
+    bench_broadcast,
 );

@@ -1,9 +1,13 @@
 use std::collections::hash_map::Entry;
 use std::mem::MaybeUninit;
-use nalgebra::{DMatrix, Dynamic, Matrix, Storage};
+use nalgebra::{DefaultAllocator, Dim, DMatrix, Dynamic, Matrix, OMatrix, OVector, Storage, StorageMut, U1, Vector};
 use std::collections::HashMap;
 use num_traits::{FromPrimitive, One, PrimInt};
 use std::hash::Hash;
+use itertools::izip;
+use nalgebra::allocator::Allocator;
+use nalgebra::constraint::{SameNumberOfRows, ShapeConstraint};
+use simba::scalar::RealField;
 
 pub fn each_ref<T, const N: usize>(data: &[T; N]) -> [&T; N] {
     // Unlike in `map`, we don't need a guard here, as dropping a reference
@@ -71,6 +75,7 @@ pub fn row_normalize_log_weights(
     }
 }
 
+
 pub fn col_normalize_log_weights(
     weights: &mut DMatrix<f64>
 ) {
@@ -82,11 +87,71 @@ pub fn col_normalize_log_weights(
     }
 }
 
+pub fn col_broadcast_add<Real, R, C, SM, SV>(
+    mut arr: Matrix<Real, R, C, SM>,
+    vec: &Matrix<Real, C, U1, SV>,
+) -> Matrix<Real, R, C, SM>
+    where
+        Real: RealField,
+        R: Dim,
+        C: Dim,
+        DefaultAllocator: Allocator<Real, R, C>,
+        DefaultAllocator: Allocator<Real, C>,
+        SM: StorageMut<Real, R, C>,
+        SV: Storage<Real, C>,
+{
+    assert_eq!(arr.nrows(), vec.len());
+
+    let mut nrows = arr.nrows();
+    let mut out = arr;
+
+    for mut col in out.column_iter_mut() {
+        for i in 0..nrows {
+            unsafe { // Rows are already checked
+                *col.get_unchecked_mut(i) += vec.get_unchecked(i).clone();
+            }
+        }
+    }
+
+    out
+}
+
+pub fn col_broadcast_sub<Real, R, C, SM, SV>(
+    mut arr: Matrix<Real, R, C, SM>,
+    vec: &Matrix<Real, C, U1, SV>,
+) -> Matrix<Real, R, C, SM>
+    where
+        Real: RealField,
+        R: Dim,
+        C: Dim,
+        DefaultAllocator: Allocator<Real, R, C>,
+        DefaultAllocator: Allocator<Real, C>,
+        SM: StorageMut<Real, R, C>,
+        SV: Storage<Real, C>,
+{
+    assert_eq!(arr.nrows(), vec.len());
+
+    let mut nrows = arr.nrows();
+    let mut out = arr;
+
+    for mut col in out.column_iter_mut() {
+        for i in 0..nrows {
+            unsafe { // Rows are already checked
+                *col.get_unchecked_mut(i) -= vec.get_unchecked(i).clone();
+            }
+        }
+    }
+
+    out
+}
+
 #[cfg(test)]
 mod tests {
-    use nalgebra::DMatrix;
+    use nalgebra::{DMatrix, DVector};
     use num_traits::real::Real;
     use crate::stats::tests::test_almost_mat;
+    use crate::utils::col_broadcast_sub;
+    use crate::utils::data::{col_broadcast_add};
 
     #[test]
     fn test_unique_with_indices() {
@@ -132,5 +197,49 @@ mod tests {
             1.0, 1.0, 1.0,
             1.0, 1.0, 1.0,
         ]), 1e-4);
+    }
+
+    #[test]
+    fn test_broadcast_add() {
+        let x = DMatrix::<f64>::from_vec(3, 4, vec![
+            1.0, 5.0, 100.0,
+            2.0, 6.0, 200.0,
+            3.0, 7.0, 300.0,
+            4.0, 8.0, 400.0,
+        ]);
+        let v = DVector::<f64>::from_vec(vec![-3.0, -4.0, -5.0]);
+        let actual = col_broadcast_add(x, &v);
+
+        let expected = DMatrix::<f64>::from_vec(3, 4, vec![
+            -2.0, 1.0, 95.0,
+            -1.0, 2.0, 195.0,
+            0.0, 3.0, 295.0,
+            1.0,  4.0, 395.0,
+        ]);
+        println!("{} {}", actual, expected);
+
+        assert!(actual == expected);
+    }
+
+    #[test]
+    fn test_broadcast_sub() {
+        let x = DMatrix::<f64>::from_vec(3, 4, vec![
+            1.0, 5.0, 100.0,
+            2.0, 6.0, 200.0,
+            3.0, 7.0, 300.0,
+            4.0, 8.0, 400.0,
+        ]);
+        let v = DVector::<f64>::from_vec(vec![3.0, 4.0, 5.0]);
+        let actual = col_broadcast_sub(x, &v);
+
+        let expected = DMatrix::<f64>::from_vec(3, 4, vec![
+            -2.0, 1.0, 95.0,
+            -1.0, 2.0, 195.0,
+            0.0, 3.0, 295.0,
+            1.0,  4.0, 395.0,
+        ]);
+        println!("{} {}", actual, expected);
+
+        assert!(actual == expected);
     }
 }
