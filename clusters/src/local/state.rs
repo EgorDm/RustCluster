@@ -1,4 +1,6 @@
+use itertools::izip;
 use std::marker::PhantomData;
+use std::ops::Range;
 use nalgebra::{Dim, DMatrix, DVector, Dynamic, Matrix, RowDVector, RowVector, Storage};
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
@@ -7,6 +9,7 @@ use crate::global::GlobalState;
 use crate::options::ModelOptions;
 use crate::stats::{GaussianPrior, SufficientStats};
 use crate::utils::{col_normalize_log_weights, row_normalize_log_weights};
+
 
 pub type LocalStats<P: GaussianPrior> = Vec<(P::SuffStats, [P::SuffStats; 2])>;
 
@@ -19,22 +22,25 @@ pub struct LocalState<P: GaussianPrior> {
 }
 
 impl<P: GaussianPrior> LocalState<P> {
+    pub fn new(
+        data: DMatrix<f64>,
+        labels: RowDVector<usize>,
+        labels_aux: RowDVector<usize>,
+    ) -> Self {
+        Self { data, labels, labels_aux, _phantoms: PhantomData }
+    }
+
     pub fn from_init<R: Rng>(
         data: DMatrix<f64>,
         n_clusters: usize,
         options: &ModelOptions<P>,
-        rng: &mut R
+        rng: &mut R,
     ) -> Self {
         let n_points = data.ncols();
         let n_clusters = n_clusters + options.outlier.is_some() as usize;
         let labels = RowDVector::from_fn(n_points, |i, _| rng.gen_range(0..n_clusters));
         let labels_aux = RowDVector::from_fn(n_points, |i, _| rng.gen_range(0..2));
-        Self {
-            data,
-            labels,
-            labels_aux,
-            _phantoms: PhantomData,
-        }
+        Self::new(data, labels, labels_aux)
     }
 
     pub fn n_points(&self) -> usize {
@@ -90,39 +96,48 @@ impl<P: GaussianPrior> LocalState<P> {
 
     pub fn collect_stats(
         local: &LocalState<P>,
-        n_clusters: usize,
+        clusters: Range<usize>,
     ) -> LocalStats<P> {
-        (0..n_clusters)
-            .map(|k| Self::collect_stats_cluster(local, k))
-            .collect()
-    }
+        // Allocate container for sorted data
+        let mut data = DMatrix::zeros(local.data.nrows(), local.data.ncols());
 
-    pub fn collect_stats_cluster(
-        local: &LocalState<P>,
-        cluster_id: usize,
-    ) -> (P::SuffStats, [P::SuffStats; 2]) {
-        let idx_l: Vec<_> = local.labels.iter().cloned()
-            .zip(local.labels_aux.iter().cloned())
-            .enumerate()
-            .filter(|(_, (x, y))| *x == cluster_id && *y == 0)
-            .map(|(i, _)| i)
-            .collect();
-        let idx_r = local.labels.iter().cloned()
-            .zip(local.labels_aux.iter().cloned())
-            .enumerate()
-            .filter(|(_, (x, y))| *x == cluster_id && *y == 1)
-            .map(|(i, _)| i);
+        // Compute offsets for data points in each cluster
+        let mut counts = vec![0usize; clusters.len() * 2];
+        for (&prim, &aux) in izip!(&local.labels, &local.labels_aux) {
+            counts[prim * 2 + aux] += 1;
+        }
 
-        let idx: Vec<_> = idx_l.iter().cloned().chain(idx_r).collect();
-        let points = local.data.select_columns(&idx);
+        let mut offsets = vec![0usize; clusters.len() * 2 + 1];
+        for i in 1..offsets.len() {
+            offsets[i] += counts[i - 1] + offsets[i - 1];
+        }
 
-        let prim = P::SuffStats::from_data(&points);
-        let aux = [
-            P::SuffStats::from_data(&points.columns_range(0..idx_l.len()).into_owned()),
-            P::SuffStats::from_data(&points.columns_range(idx_l.len()..).into_owned()),
-        ];
+        // Copy data points into the sorted container
+        let mut offsets_local = offsets.clone();
+        for (&prim, &aux, col) in izip!(&local.labels, &local.labels_aux, local.data.column_iter()) {
+            let idx = &mut offsets_local[prim * 2 + aux];
+            data.column_mut(*idx).as_mut_slice().copy_from_slice(col.as_slice());
+            *idx += 1;
+        }
 
-        (prim, aux)
+        let mut stats = vec![];
+        for i in clusters {
+            let i = i * 2;
+            let prim = P::SuffStats::from_data(
+                &data.columns_range(offsets[i]..offsets[i + 2])
+            );
+            let aux = [
+                P::SuffStats::from_data(
+                    &data.columns_range(offsets[i]..offsets[i + 1])
+                ),
+                P::SuffStats::from_data(
+                    &data.columns_range(offsets[i + 1]..offsets[i + 2])
+                ),
+            ];
+            stats.push((prim, aux));
+        }
+
+        stats
     }
 
     pub fn update_reset_clusters<R: Rng>(
@@ -160,5 +175,43 @@ pub fn sample_weighted<R: Rng>(weights: &DMatrix<f64>, labels: &mut RowDVector<u
         // TODO: take the weighted reservoir sampler from tch-geometric
         let dist = WeightedIndex::new(&col).unwrap();
         labels[i] = dist.sample(rng);
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use nalgebra::{DMatrix, DVector, RowDVector};
+    use rand::prelude::StdRng;
+    use rand::{Rng, SeedableRng};
+    use crate::stats::{NIW, NIWStats, SufficientStats};
+    use crate::stats::tests::test_almost_mat;
+
+    #[test]
+    fn test_collect_stats() {
+        let mut rng = StdRng::seed_from_u64(42);
+        let data = DMatrix::from_fn(2, 120, |_, _| rng.gen_range(0.0..1.0));
+        let labels = RowDVector::from_fn(120, |_, i| i / 30);
+        let labels_aux = RowDVector::from_fn(120, |_, i| i / 15 % 2);
+
+        let local = super::LocalState::new(data.clone(), labels, labels_aux);
+        let stats = super::LocalState::<NIW>::collect_stats(&local, 0..4);
+        for (i, (prim, aux)) in stats.into_iter().enumerate() {
+            let prim_og = NIWStats::from_data(&data.columns_range(i * 30..(i + 1) * 30).into_owned());
+            let aux_og = [
+                NIWStats::from_data(&data.columns_range(i * 30..i * 30 + 15).into_owned()),
+                NIWStats::from_data(&data.columns_range(i * 30 + 15..i * 30 + 30).into_owned()),
+            ];
+
+            assert_eq!(prim.n_points, prim_og.n_points);
+            test_almost_mat(&prim.mean_sum, &prim_og.mean_sum, 1e-4);
+            test_almost_mat(&prim.cov_sum, &prim_og.cov_sum, 1e-4);
+
+            for a in 0..2 {
+                test_almost_mat(&aux[a].mean_sum, &aux_og[a].mean_sum, 1e-4);
+                test_almost_mat(&aux[a].cov_sum, &aux_og[a].cov_sum, 1e-4);
+                assert_eq!(aux[a].n_points, aux_og[a].n_points);
+            }
+        }
     }
 }

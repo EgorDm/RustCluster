@@ -11,6 +11,7 @@ nalgebra = { version = "0.29", features = ["rand"] }
 simba = { version = "0.6", default-features = false }
 statrs = { path = "../statrs" }
 num-traits = "0.2.14"
+itertools = "0.10"
 plotters = { git = "https://github.com/EgorDm/plotters.git", branch = "bugfix/vertex-colinearity" }
 plotters-backend = { git = "https://github.com/EgorDm/plotters.git", branch = "bugfix/vertex-colinearity" }
 

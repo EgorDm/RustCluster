@@ -79,7 +79,7 @@ fn main() {
     let mut global_state = GlobalState::<NIW>::from_init(&data_stats, fit_options.init_clusters, &model_options, &mut rng);
 
     // update_suff_stats_posterior!
-    let stats = LocalState::<NIW>::collect_stats(&local_state, global_state.n_clusters());
+    let stats = LocalState::<NIW>::collect_stats(&local_state, 0..global_state.n_clusters());
     GlobalState::update_clusters_post(&mut global_state, stats);
     GlobalState::update_sample_clusters(&mut global_state, &model_options, &mut rng);
 
@@ -107,7 +107,7 @@ fn main() {
             // LocalState::update_sample_labels(&global_state, &mut local_state, true, &mut rng);
             LocalState::update_sample_labels_aux(&global_state, &mut local_state, &mut rng);
             // update_suff_stats_posterior!
-            let stats = LocalState::<NIW>::collect_stats(&local_state, global_state.n_clusters());
+            let stats = LocalState::<NIW>::collect_stats(&local_state, 0..global_state.n_clusters());
             GlobalState::update_clusters_post(&mut global_state, stats);
             // Remove reset bad clusters (concentrated subclusters)
             let bad_clusters = GlobalState::collect_bad_clusters(&mut global_state);
@@ -117,7 +117,7 @@ fn main() {
                 let split_idx = GlobalActions::check_and_split(&mut global_state, &model_options, &mut rng);
                 LocalActions::apply_split(&mut local_state, &split_idx, &mut rng);
                 if split_idx.len() > 0 {
-                    let stats = LocalState::<NIW>::collect_stats(&local_state, global_state.n_clusters());
+                    let stats = LocalState::<NIW>::collect_stats(&local_state, 0..global_state.n_clusters());
                     GlobalState::update_clusters_post(&mut global_state, stats);
                 }
                 let merge_idx = GlobalActions::check_and_merge(&mut global_state, &model_options, &mut rng);

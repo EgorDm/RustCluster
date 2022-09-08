@@ -159,6 +159,7 @@ name = "clusters"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "itertools",
  "nalgebra",
  "ndarray",
  "ndarray-npy",
