@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::ops::{Add, AddAssign};
 use nalgebra::DVector;
 use rand::distributions::Distribution;
 use rand::Rng;
@@ -45,7 +46,7 @@ impl<P: GaussianPrior> SuperClusterParams<P> {
         burnout_period: usize,
         rng: &mut R,
     ) -> Self {
-        let stats = prim_l.stats.add(&prim_r.stats);
+        let stats = prim_l.stats.clone()  + &prim_r.stats;
         let post = P::posterior(&prim_l.prior, &stats);
         let prim = ClusterParams::new(prim_l.prior.clone(), post, stats, prim_r.dist.clone());
 
@@ -79,15 +80,47 @@ impl<P: GaussianPrior> SuperClusterParams<P> {
         (prim, aux, weights)
     }
 
-    pub fn update_post(
-        &mut self,
-        stats: P::SuffStats,
-        stats_aux: [P::SuffStats; 2],
-    ) {
-        self.prim.update_post(stats);
-        for (i, stats_aux) in stats_aux.into_iter().enumerate() {
+    pub fn update_post(&mut self, stats: SuperClusterStats<P>) {
+        self.prim.update_post(stats.prim);
+        for (i, stats_aux) in stats.aux.into_iter().enumerate() {
             self.aux[i].update_post(stats_aux);
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SuperClusterStats<P: GaussianPrior> {
+    pub prim: P::SuffStats,
+    pub aux: [P::SuffStats; 2],
+}
+
+impl<P: GaussianPrior> SuperClusterStats<P> {
+    pub fn new(prim: P::SuffStats, aux: [P::SuffStats; 2]) -> Self {
+        SuperClusterStats { prim, aux }
+    }
+}
+
+impl<'a, P: GaussianPrior> Add<&'a Self> for SuperClusterStats<P> {
+    type Output = Self;
+
+    fn add(mut self, rhs: &'a Self) -> Self::Output {
+        self += rhs;
+        self
+    }
+}
+
+impl<'a, P: GaussianPrior> AddAssign<&'a Self> for SuperClusterStats<P> {
+    fn add_assign(&mut self, rhs: &'a Self) {
+        self.prim += &rhs.prim;
+        for (i, rhs_aux) in rhs.aux.iter().enumerate() {
+            self.aux[i] += rhs_aux;
+        }
+    }
+}
+
+impl<P: GaussianPrior> SufficientStats for SuperClusterStats<P> {
+    fn n_points(&self) -> usize {
+        self.prim.n_points()
     }
 }
 

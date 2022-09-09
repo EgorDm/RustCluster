@@ -1,17 +1,69 @@
+use std::iter::Sum;
 use itertools::{Itertools, izip};
 use std::marker::PhantomData;
-use std::ops::Range;
+use std::ops::{Add, AddAssign, Range};
+use std::vec::IntoIter;
 use nalgebra::{Dim, DMatrix, DVector, Dynamic, Matrix, RowDVector, RowVector, Storage};
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
 use statrs::distribution::{Continuous};
+use crate::clusters::SuperClusterStats;
 use crate::global::GlobalState;
 use crate::options::ModelOptions;
-use crate::stats::{ContinuousBatchwise, GaussianPrior, SufficientStats};
+use crate::stats::{ContinuousBatchwise, FromData, GaussianPrior, SufficientStats};
 use crate::utils::{col_normalize_log_weights, col_scatter, group_sort, replacement_sampling_weighted, row_normalize_log_weights};
 use crate::utils::Iterutils;
 
-pub type LocalStats<P: GaussianPrior> = Vec<(P::SuffStats, [P::SuffStats; 2])>;
+#[derive(Debug, Clone)]
+pub struct LocalStats<P: GaussianPrior>(pub Vec<SuperClusterStats<P>>);
+
+impl<P: GaussianPrior> IntoIterator for LocalStats<P> {
+    type Item = SuperClusterStats<P>;
+    type IntoIter = IntoIter<SuperClusterStats<P>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<'a, P: GaussianPrior> Add<&'a Self> for LocalStats<P> {
+    type Output = Self;
+
+    fn add(mut self, rhs: &'a Self) -> Self::Output {
+        self += rhs;
+        self
+    }
+}
+
+impl<'a, P: GaussianPrior> AddAssign<&'a Self> for LocalStats<P> {
+    fn add_assign(&mut self, rhs: &'a Self) {
+        for (l, r) in self.0.iter_mut().zip(rhs.0.iter()) {
+            *l += r;
+        }
+    }
+}
+
+impl<P: GaussianPrior> SufficientStats for LocalStats<P> {
+    fn n_points(&self) -> usize {
+        self.0.iter().map(|x| x.n_points()).sum()
+    }
+}
+
+impl<P: GaussianPrior> Default for LocalStats<P> {
+    fn default() -> Self {
+        Self(Vec::new())
+    }
+}
+
+impl<P: GaussianPrior> Sum for LocalStats<P> {
+    fn sum<I: Iterator<Item=Self>>(mut iter: I) -> Self {
+        let mut res = iter.next().unwrap_or_default();
+        for x in iter {
+            res += &x;
+        }
+        res
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LocalState<P: GaussianPrior> {
@@ -56,7 +108,7 @@ impl<P: GaussianPrior> LocalState<P> {
         group_sort(
             &counts,
             izip!(&self.labels, &self.labels_aux),
-            |(&prim, &aux)| prim * 2 + aux
+            |(&prim, &aux)| prim * 2 + aux,
         )
     }
 
@@ -108,7 +160,7 @@ impl<P: GaussianPrior> LocalState<P> {
             col_scatter(
                 &mut ll.row_mut(aux),
                 indices,
-                &probs
+                &probs,
             );
         }
 
@@ -141,10 +193,16 @@ impl<P: GaussianPrior> LocalState<P> {
                     &data.columns_range(offsets[i + 1]..offsets[i + 2])
                 ),
             ];
-            stats.push((prim, aux));
+            stats.push(SuperClusterStats::new(prim, aux));
         }
 
-        stats
+        LocalStats(stats)
+    }
+
+    pub fn collect_data_stats(
+        local: &LocalState<P>,
+    ) -> P::SuffStats {
+        P::SuffStats::from_data(&local.data)
     }
 
     pub fn update_reset_clusters<R: Rng>(
@@ -190,7 +248,8 @@ mod tests {
     use nalgebra::{DMatrix, DVector, RowDVector};
     use rand::prelude::StdRng;
     use rand::{Rng, SeedableRng};
-    use crate::stats::{NIW, NIWStats, SufficientStats};
+    use crate::clusters::SuperClusterStats;
+    use crate::stats::{FromData, NIW, NIWStats, SufficientStats};
     use crate::stats::tests::test_almost_mat;
 
     #[test]
@@ -202,7 +261,7 @@ mod tests {
 
         let local = super::LocalState::new(data.clone(), labels, labels_aux);
         let stats = super::LocalState::<NIW>::collect_stats(&local, 0..4);
-        for (i, (prim, aux)) in stats.into_iter().enumerate() {
+        for (i, SuperClusterStats { prim, aux }) in stats.into_iter().enumerate() {
             let prim_og = NIWStats::from_data(&data.columns_range(i * 30..(i + 1) * 30).into_owned());
             let aux_og = [
                 NIWStats::from_data(&data.columns_range(i * 30..i * 30 + 15).into_owned()),
@@ -220,4 +279,25 @@ mod tests {
             }
         }
     }
+
+    // #[test]
+    // fn test_sorted_indices() {
+    //     let data = DMatrix::from_fn(2, 120, |_, _| rng.gen_range(0.0..1.0));
+    //     let labels = RowDVector::from_fn(120, |_, i| i / 30);
+    //     let labels_aux = RowDVector::from_fn(120, |_, i| i / 15 % 2);
+    //
+    //     let local = super::LocalState::new(data.clone(), labels, labels_aux);
+    //
+    //     todo!()
+    // }
+    //
+    // #[test]
+    // fn test_sample_labels() {
+    //     todo!()
+    // }
+    //
+    // #[test]
+    // fn test_sample_labels_aux() {
+    //     todo!()
+    // }
 }

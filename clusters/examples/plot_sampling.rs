@@ -1,3 +1,5 @@
+mod parallellism;
+
 use nalgebra::{DMatrix, DVector};
 use ndarray::AssignElem;
 use num_traits::real::Real;

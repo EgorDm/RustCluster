@@ -96,8 +96,8 @@ impl<P: GaussianPrior> GlobalState<P> {
         global: &mut GlobalState<P>,
         stats: LocalStats<P>
     ) {
-        for (k, (prim, aux)) in stats.into_iter().enumerate() {
-            global.clusters[k].update_post(prim, aux)
+        for (k, stats) in stats.0.into_iter().enumerate() {
+            global.clusters[k].update_post(stats)
         }
     }
 

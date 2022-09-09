@@ -12,6 +12,7 @@ simba = { version = "0.6", default-features = false }
 statrs = { path = "../statrs" }
 num-traits = "0.2.14"
 itertools = "0.10"
+crossbeam-channel = "0.5"
 plotters = { git = "https://github.com/EgorDm/plotters.git", branch = "bugfix/vertex-colinearity" }
 plotters-backend = { git = "https://github.com/EgorDm/plotters.git", branch = "bugfix/vertex-colinearity" }
 
@@ -22,7 +23,7 @@ ndarray-npy = "0.8.1"
 ndarray = "0.15.4"
 
 [[example]]
-name = "plot_sampling"
+name = "parallellism"
 
 [[bench]]
 name = "clusters_bench"

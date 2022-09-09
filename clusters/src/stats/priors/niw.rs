@@ -1,17 +1,25 @@
-use std::ops::Add;
+use std::iter::Sum;
+use std::ops::{Add, AddAssign};
 use nalgebra::{DMatrix, DVector, Dynamic, Matrix, Storage};
 use rand::distributions::Distribution;
 use rand::Rng;
 use statrs::consts::LN_PI;
 use statrs::distribution::{InverseWishart, MultivariateNormal};
 use statrs::function::gamma::mvlgamma;
-use crate::stats::{ConjugatePrior, Covariance, GaussianPrior, PriorHyperParams, SufficientStats};
+use crate::stats::{ConjugatePrior, Covariance, FromData, GaussianPrior, PriorHyperParams, SufficientStats};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NIWStats {
     pub n_points: usize,
     pub mean_sum: DVector<f64>,
     pub cov_sum: DMatrix<f64>,
+}
+
+impl Sum for NIWStats {
+    fn sum<I: Iterator<Item=Self>>(mut iter: I) -> Self {
+        let res = iter.next().unwrap_or_default();
+        iter.fold(res, |acc, x| acc + &x)
+    }
 }
 
 impl Default for NIWStats {
@@ -24,25 +32,35 @@ impl Default for NIWStats {
     }
 }
 
-impl SufficientStats for NIWStats {
-    fn from_data<S: Storage<f64, Dynamic, Dynamic>>(
-        data: &Matrix<f64, Dynamic, Dynamic, S>,
-    ) -> Self {
+impl FromData for NIWStats {
+    fn from_data<S: Storage<f64, Dynamic, Dynamic>>(data: &Matrix<f64, Dynamic, Dynamic, S>) -> Self {
         let n_points = data.ncols();
         let mean_sum = data.column_sum();
         let cov_sum = (data * data.transpose()).symmetric_part();
         Self { n_points, mean_sum, cov_sum }
     }
+}
 
+impl SufficientStats for NIWStats {
     fn n_points(&self) -> usize {
         self.n_points
     }
+}
 
-    fn add(&self, rhs: &Self) -> Self {
-        let n_points = self.n_points + rhs.n_points;
-        let mean_sum = &self.mean_sum + &rhs.mean_sum;
-        let cov_sum = &self.cov_sum + &rhs.cov_sum;
-        NIWStats { n_points, mean_sum, cov_sum }
+impl<'a> AddAssign<&'a NIWStats> for NIWStats {
+    fn add_assign(&mut self, rhs: &'a NIWStats) {
+        self.n_points += rhs.n_points;
+        self.mean_sum += &rhs.mean_sum;
+        self.cov_sum += &rhs.cov_sum;
+    }
+}
+
+impl<'a> Add<&'a NIWStats> for NIWStats {
+    type Output = NIWStats;
+
+    fn add(mut self, rhs: &'a NIWStats) -> Self::Output {
+        self += rhs;
+        self
     }
 }
 
@@ -166,7 +184,7 @@ mod tests {
     use rand::prelude::StdRng;
     use rand::SeedableRng;
     use statrs::assert_almost_eq;
-    use crate::stats::{ConjugatePrior, NIW, NIWParams, NIWStats, SufficientStats};
+    use crate::stats::{ConjugatePrior, FromData, NIW, NIWParams, NIWStats, SufficientStats};
     use crate::stats::tests::{points1, test_almost_mat};
 
     fn points0() -> DMatrix<f64> {

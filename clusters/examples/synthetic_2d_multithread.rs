@@ -72,14 +72,24 @@ fn main() {
     // fit_options.iters = 20;
     // fit_options.iters = 40;
 
-    let mut rng = StdRng::seed_from_u64(fit_options.seed);
-    // let mut rng = SmallRng::seed_from_u64(42);
-    let mut local_state = LocalState::<NIW>::from_init(x, fit_options.init_clusters, &model_options, &mut rng);
-    let data_stats = NIWStats::from_data(&local_state.data);
+    let mut rng = StdRng::seed_from_u64(fit_options.seed + 1000);
+    let mut local_states = vec![];
+    for i in 0..10 {
+        local_states.push(
+            LocalState::<NIW>::from_init(
+                x.columns_range(i*1000..(i+1)*1000).clone_owned(),
+                fit_options.init_clusters, &model_options, &mut rng
+            )
+        )
+    }
+
+    let data_stats = local_states.iter().map(LocalState::collect_data_stats).sum();
     let mut global_state = GlobalState::<NIW>::from_init(&data_stats, fit_options.init_clusters, &model_options, &mut rng);
 
     // update_suff_stats_posterior!
-    let stats = LocalState::<NIW>::collect_stats(&local_state, 0..global_state.n_clusters());
+    let stats = local_states.iter()
+        .map(|local_state| LocalState::collect_stats(local_state, 0..global_state.n_clusters()))
+        .sum();
     GlobalState::update_clusters_post(&mut global_state, stats);
     GlobalState::update_sample_clusters(&mut global_state, &model_options, &mut rng);
 
@@ -91,7 +101,7 @@ fn main() {
     // LocalState::update_sample_labels(&global_state, &mut local_state, true, &mut rng);
     // LocalState::update_sample_labels_aux(&global_state, &mut local_state, &mut rng);
     //
-    // let plot_y = local_state.labels.select_columns(&plot_idx);
+    // let plot_y = y.select_columns(&plot_idx);
     // plot(&format!("examples/data/plot/synthetic_2d/test.png"), &plot_x, plot_y.as_slice(), &global_state.clusters);
     // // End Testing
 
@@ -103,36 +113,59 @@ fn main() {
         let now = Instant::now();
         {
             GlobalState::update_sample_clusters(&mut global_state, &model_options, &mut rng);
-            LocalState::update_sample_labels(&global_state, &mut local_state, is_final, &mut rng);
-            LocalState::update_sample_labels_aux(&global_state, &mut local_state, &mut rng);
+            for local_state in local_states.iter_mut() {
+                LocalState::update_sample_labels(&global_state, local_state, is_final, &mut rng);
+                LocalState::update_sample_labels_aux(&global_state, local_state, &mut rng);
+            }
             // update_suff_stats_posterior!
-            let stats = LocalState::<NIW>::collect_stats(&local_state, 0..global_state.n_clusters());
+            let stats = local_states.iter()
+                .map(|local_state| LocalState::collect_stats(local_state, 0..global_state.n_clusters()))
+                .sum();
             GlobalState::update_clusters_post(&mut global_state, stats);
             // Remove reset bad clusters (concentrated subclusters)
             let bad_clusters = GlobalState::collect_bad_clusters(&mut global_state);
-            LocalState::update_reset_clusters(&mut local_state, &bad_clusters, &mut rng);
+            for local_state in local_states.iter_mut() {
+                LocalState::update_reset_clusters(local_state, &bad_clusters, &mut rng);
+            }
 
             if !no_more_splits {
                 let split_idx = GlobalActions::check_and_split(&mut global_state, &model_options, &mut rng);
-                LocalActions::apply_split(&mut local_state, &split_idx, &mut rng);
+                for local_state in local_states.iter_mut() {
+                    LocalActions::apply_split(local_state, &split_idx, &mut rng);
+                }
+
                 if split_idx.len() > 0 {
-                    let stats = LocalState::<NIW>::collect_stats(&local_state, 0..global_state.n_clusters());
+                    let stats = local_states.iter()
+                        .map(|local_state| LocalState::collect_stats(local_state, 0..global_state.n_clusters()))
+                        .sum();
                     GlobalState::update_clusters_post(&mut global_state, stats);
                 }
                 let merge_idx = GlobalActions::check_and_merge(&mut global_state, &model_options, &mut rng);
-                LocalActions::apply_merge(&mut local_state, &merge_idx);
+                for local_state in local_states.iter_mut() {
+                    LocalActions::apply_merge(local_state, &merge_idx);
+                }
             }
 
             let removed_idx = GlobalState::update_remove_empty_clusters(&mut global_state, &model_options);
-            LocalState::update_remove_clusters(&mut local_state, &removed_idx);
+            for local_state in local_states.iter_mut() {
+                LocalState::update_remove_clusters(local_state, &removed_idx);
+            }
         }
         let elapsed = now.elapsed();
 
-        let nmi = normalized_mutual_info_score(y.as_slice(), local_state.labels.as_slice());
+        let mut nmi = 0.0;
+        for (i, local_state) in local_states.iter().enumerate() {
+            nmi += normalized_mutual_info_score(
+                y.columns_range(i*1000..(i+1)*1000).clone_owned().as_slice(),
+                local_state.labels.as_slice()
+            );
+        }
+        nmi /= local_states.len() as f64;
+
         println!("Run iteration {} in {:.2?}; k={}, nmi={}", i, elapsed, global_state.n_clusters(), nmi);
 
 
-        // let plot_y = local_state.labels.select_columns(&plot_idx);
+        // let plot_y = y.select_columns(&plot_idx);
         // plot(&format!("examples/data/plot/synthetic_2d/step_{:04}.png", i), &plot_x, plot_y.as_slice(), &global_state.clusters);
         // calculate NMI
     }

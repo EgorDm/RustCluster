@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use std::ops::Add;
+use std::ops::{Add, AddAssign};
 use nalgebra::{Dynamic, Matrix, Storage};
 use rand::Rng;
 use statrs::distribution::MultivariateNormal;
@@ -10,7 +10,7 @@ mod niw;
 
 pub trait ConjugatePrior: Clone {
     type HyperParams: PriorHyperParams + Debug + Clone + PartialEq;
-    type SuffStats: SufficientStats + Debug + Clone + PartialEq;
+    type SuffStats: SufficientStats + FromData + Default + Debug + PartialEq;
 
     fn posterior(
         prior: &Self::HyperParams,
@@ -33,14 +33,17 @@ pub trait PriorHyperParams {
     fn default(dim: usize) -> Self;
 }
 
-pub trait SufficientStats: Sized + Default {
+pub trait FromData {
     fn from_data<S: Storage<f64, Dynamic, Dynamic>>(
         data: &Matrix<f64, Dynamic, Dynamic, S>,
     ) -> Self;
+}
 
+pub trait SufficientStats: Sized + Clone
++ for<'a> Add<&'a Self, Output=Self>
++ for<'a> AddAssign<&'a Self>
+{
     fn n_points(&self) -> usize;
-
-    fn add(&self, rhs: &Self) -> Self;
 }
 
 pub trait GaussianPrior: ConjugatePrior {

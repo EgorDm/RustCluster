@@ -66,7 +66,7 @@ impl<P: GaussianPrior> GlobalActions<P> {
         alpha: f64,
         rng: &mut R,
     ) -> bool {
-        let prim_stats = prim_l.stats.add(&prim_r.stats);
+        let prim_stats = prim_l.stats.clone() + &prim_r.stats;
         let prim_post = P::posterior(&prim_l.prior, &prim_stats);
         let prim = ClusterParams::new(prim_l.prior.clone(), prim_post, prim_stats, prim_l.dist.clone());
 
