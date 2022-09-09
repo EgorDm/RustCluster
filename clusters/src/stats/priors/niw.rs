@@ -18,7 +18,13 @@ pub struct NIWStats {
 impl Sum for NIWStats {
     fn sum<I: Iterator<Item=Self>>(mut iter: I) -> Self {
         let res = iter.next().unwrap_or_default();
-        iter.fold(res, |acc, x| acc + &x)
+        iter.fold(res, |acc, x| {
+            if acc.n_points > 0 {
+                acc + &x
+            } else {
+                x
+            }
+        })
     }
 }
 
@@ -61,17 +67,6 @@ impl<'a> Add<&'a NIWStats> for NIWStats {
     fn add(mut self, rhs: &'a NIWStats) -> Self::Output {
         self += rhs;
         self
-    }
-}
-
-impl<'a, 'b> Add<&'b NIWStats> for &'a NIWStats {
-    type Output = NIWStats;
-
-    fn add(self, rhs: &'b NIWStats) -> Self::Output {
-        let n_points = self.n_points + rhs.n_points;
-        let mean_sum = &self.mean_sum + &rhs.mean_sum;
-        let cov_sum = &self.cov_sum + &rhs.cov_sum;
-        NIWStats { n_points, mean_sum, cov_sum }
     }
 }
 
