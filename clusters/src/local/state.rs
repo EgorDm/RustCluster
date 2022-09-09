@@ -1,4 +1,4 @@
-use itertools::izip;
+use itertools::{Itertools, izip};
 use std::marker::PhantomData;
 use std::ops::Range;
 use nalgebra::{Dim, DMatrix, DVector, Dynamic, Matrix, RowDVector, RowVector, Storage};
@@ -8,8 +8,8 @@ use statrs::distribution::{Continuous};
 use crate::global::GlobalState;
 use crate::options::ModelOptions;
 use crate::stats::{ContinuousBatchwise, GaussianPrior, SufficientStats};
-use crate::utils::{col_normalize_log_weights, col_scatter, row_normalize_log_weights};
-
+use crate::utils::{col_normalize_log_weights, col_scatter, group_sort, replacement_sampling_weighted, row_normalize_log_weights};
+use crate::utils::Iterutils;
 
 pub type LocalStats<P: GaussianPrior> = Vec<(P::SuffStats, [P::SuffStats; 2])>;
 
@@ -47,6 +47,19 @@ impl<P: GaussianPrior> LocalState<P> {
         self.data.ncols()
     }
 
+    fn sorted_indices(&self, n_clusters: usize) -> (Vec<usize>, Vec<usize>) {
+        // Split data points into contiguous blocks
+        let n_blocks = n_clusters * 2;
+        let counts = izip!(&self.labels, &self.labels_aux)
+            .map(|(&prim, &aux)| prim * 2 + aux)
+            .bincounts(n_blocks);
+        group_sort(
+            &counts,
+            izip!(&self.labels, &self.labels_aux),
+            |(&prim, &aux)| prim * 2 + aux
+        )
+    }
+
     pub fn update_sample_labels<R: Rng>(
         global: &GlobalState<P>,
         local: &mut LocalState<P>,
@@ -81,33 +94,20 @@ impl<P: GaussianPrior> LocalState<P> {
         local: &mut LocalState<P>,
         rng: &mut R,
     ) {
-        // Compute number of points per cluster
-        let mut counts = vec![0usize; global.clusters.len() * 2];
-        for (&prim, &aux) in izip!(&local.labels, &local.labels_aux) {
-            counts[prim * 2 + aux] += 1;
-        }
-
-        // Split data points into contiguous blocks
-        let dim = local.data.nrows();
-        let mut blocks: Vec<_> = counts.iter().map(|&n| DMatrix::zeros(dim, n)).collect();
-        let mut block_ids: Vec<_> = counts.iter().map(|&n| vec![0; n]).collect();
-        let mut offsets = vec![0usize; counts.len()];
-        for (i, (&prim, &aux, point)) in izip!(&local.labels, &local.labels_aux, local.data.column_iter()).enumerate() {
-            let block_id = prim * 2 + aux;
-            let idx = &mut offsets[block_id];
-            blocks[block_id].column_mut(*idx).copy_from_slice(point.as_slice());
-            block_ids[block_id][*idx] = i;
-            *idx += 1;
-        }
+        // Split data points into contiguous blocks (indexes only for now)
+        let (indices, offsets) = local.sorted_indices(global.clusters.len());
 
         // Sample pdf for each block and scatter them back in order to local.data
         let mut ll = DMatrix::zeros(2, local.n_points());
-        for (block_id, block) in blocks.into_iter().enumerate() {
+        for block_id in 0..offsets.len() - 1 {
+            let indices = &indices[offsets[block_id]..offsets[block_id + 1]];
+            let block = local.data.select_columns(indices);
+
             let (prim, aux) = (block_id / 2, block_id % 2);
             let probs = global.clusters[prim].aux[aux].dist.batchwise_ln_pdf(block).transpose();
             col_scatter(
                 &mut ll.row_mut(aux),
-                &block_ids[block_id],
+                indices,
                 &probs
             );
         }
@@ -121,27 +121,11 @@ impl<P: GaussianPrior> LocalState<P> {
         local: &LocalState<P>,
         clusters: Range<usize>,
     ) -> LocalStats<P> {
-        // Allocate container for sorted data
-        let mut data = DMatrix::zeros(local.data.nrows(), local.data.ncols());
+        // Split data points into contiguous blocks (indexes only for now)
+        let (indices, offsets) = local.sorted_indices(clusters.len());
 
-        // Compute offsets for data points in each cluster
-        let mut counts = vec![0usize; clusters.len() * 2];
-        for (&prim, &aux) in izip!(&local.labels, &local.labels_aux) {
-            counts[prim * 2 + aux] += 1;
-        }
-
-        let mut offsets = vec![0usize; clusters.len() * 2 + 1];
-        for i in 1..offsets.len() {
-            offsets[i] += counts[i - 1] + offsets[i - 1];
-        }
-
-        // Copy data points into the sorted container
-        let mut offsets_local = offsets.clone();
-        for (&prim, &aux, col) in izip!(&local.labels, &local.labels_aux, local.data.column_iter()) {
-            let idx = &mut offsets_local[prim * 2 + aux];
-            data.column_mut(*idx).as_mut_slice().copy_from_slice(col.as_slice());
-            *idx += 1;
-        }
+        // Gather data from sorted indices
+        let data = local.data.select_columns(&indices);
 
         let mut stats = vec![];
         for i in clusters {
@@ -194,10 +178,9 @@ impl<P: GaussianPrior> LocalState<P> {
 }
 
 pub fn sample_weighted<R: Rng>(weights: &DMatrix<f64>, labels: &mut RowDVector<usize>, rng: &mut R) {
+    let labels = labels.as_mut_slice();
     for (i, col) in weights.column_iter().enumerate() {
-        // TODO: take the weighted reservoir sampler from tch-geometric
-        let dist = WeightedIndex::new(&col).unwrap();
-        labels[i] = dist.sample(rng);
+        replacement_sampling_weighted(rng, col.into_iter().cloned(), &mut labels[i..=i]);
     }
 }
 

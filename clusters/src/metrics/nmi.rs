@@ -2,10 +2,11 @@
 
 use std::collections::HashMap;
 use std::hash::Hash;
+use itertools::Itertools;
 use num_traits::{FromPrimitive, PrimInt};
 use num_traits::real::Real;
 use simba::scalar::SupersetOf;
-use crate::utils::{bincount, unique_with_indices};
+use crate::utils::{unique_with_indices};
 
 pub fn contingency_matrix<T: Copy + Hash + Eq + Ord>(
     labels_true: &[T],
@@ -23,7 +24,7 @@ pub fn contingency_matrix<T: Copy + Hash + Eq + Ord>(
 }
 
 pub fn entropy<T: Copy + Hash + Eq>(data: &[T]) -> Option<f64> {
-    let bincounts = bincount(data);
+    let bincounts = data.iter().cloned().counts();
     let sum = bincounts.values().cloned().sum::<usize>() as f64;
 
     let mut entropy = 0.0;

@@ -4,10 +4,24 @@ use nalgebra::{DefaultAllocator, Dim, DMatrix, Dynamic, Matrix, OMatrix, OVector
 use std::collections::HashMap;
 use num_traits::{FromPrimitive, One, PrimInt};
 use std::hash::Hash;
-use itertools::izip;
+use itertools::{Itertools, izip};
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{SameNumberOfRows, ShapeConstraint};
 use simba::scalar::RealField;
+
+pub trait Iterutils : Iterator {
+    fn bincounts(self, n_bins: usize) -> Vec<usize>
+        where
+            Self: Sized,
+            Self::Item: Into<usize>,
+    {
+        let mut counts = vec![0; n_bins];
+        self.for_each(|item| counts[item.into()] += 1);
+        counts
+    }
+}
+
+impl<T: ?Sized> Iterutils for T where T: Iterator { }
 
 pub fn each_ref<T, const N: usize>(data: &[T; N]) -> [&T; N] {
     // Unlike in `map`, we don't need a guard here, as dropping a reference
@@ -47,21 +61,6 @@ pub fn unique_with_indices<T: Copy + Hash + Eq + Ord>(data: &[T], sorted: bool) 
     }
 
     (unique, unique_index)
-}
-
-pub fn bincount<T: Copy + Hash + Eq>(data: &[T]) -> HashMap<T, usize> {
-    let mut counts = HashMap::new();
-    for &u in data {
-        match counts.entry(u) {
-            Entry::Occupied(mut e) => {
-                *e.get_mut() += 1;
-            }
-            Entry::Vacant(mut e) => {
-                e.insert(1);
-            }
-        }
-    }
-    counts
 }
 
 pub fn row_normalize_log_weights(
@@ -168,12 +167,39 @@ pub fn col_scatter<T, R, CO, CI, SO, SI>(
     }
 }
 
+pub fn group_sort<T>(
+    counts: &[usize],
+    data: impl IntoIterator<Item=T>,
+    group_fn: impl Fn(T) -> usize,
+) -> (Vec<usize>, Vec<usize>) {
+    // Compute offsets for each group
+    let mut offsets = vec![0usize; counts.len() + 1];
+    for i in 1..offsets.len() {
+        offsets[i] += counts[i - 1] + offsets[i - 1];
+    }
+
+    // Allocate resulting array
+    let mut indices = vec![0; counts.iter().sum()];
+
+    // Copy the data into the correct group while updating the offsets
+    let mut offsets_local = offsets.clone();
+    for (i, item) in data.into_iter().enumerate() {
+        let group = group_fn(item);
+        let offset = &mut offsets_local[group];
+        indices[*offset] = i;
+        *offset += 1;
+    }
+
+    (indices, offsets)
+}
+
 #[cfg(test)]
 mod tests {
+    use itertools::Itertools;
     use nalgebra::{DMatrix, DVector};
     use num_traits::real::Real;
     use crate::stats::tests::test_almost_mat;
-    use crate::utils::col_broadcast_sub;
+    use crate::utils::{col_broadcast_sub, Iterutils};
     use crate::utils::data::{col_broadcast_add};
 
     #[test]
@@ -186,11 +212,9 @@ mod tests {
 
     #[test]
     fn test_bincount() {
-        let data = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5];
-        let counts = super::bincount(&data);
-        let mut bincounts: Vec<_> = counts.into_iter().collect();
-        bincounts.sort();
-        assert_eq!(bincounts, vec![(1, 2), (2, 2), (3, 2), (4, 2), (5, 2)]);
+        let data = [1usize, 1, 2, 2, 3, 3, 4, 4, 5, 5];
+        let counts = data.into_iter().bincounts(6);
+        assert_eq!(counts, vec![0, 2, 2, 2, 2, 2]);
     }
 
     #[test]
