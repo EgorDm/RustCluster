@@ -7,8 +7,9 @@ use statrs::consts::LN_PI;
 use statrs::distribution::{InverseWishart, MultivariateNormal};
 use statrs::function::gamma::mvlgamma;
 use crate::stats::{ConjugatePrior, Covariance, FromData, GaussianPrior, PriorHyperParams, SufficientStats};
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NIWStats {
     pub n_points: usize,
     pub mean_sum: DVector<f64>,
@@ -70,7 +71,7 @@ impl<'a> Add<&'a NIWStats> for NIWStats {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NIWParams {
     pub kappa: f64,
     pub mu: DVector<f64>,
@@ -105,7 +106,7 @@ impl NIWParams {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NIW;
 
 impl ConjugatePrior for NIW {
@@ -247,7 +248,7 @@ mod tests {
     fn test_aggregate() {
         let stats1 = NIWStats::from_data(&points0());
         let stats2 = NIWStats::from_data(&points1());
-        let stats = &stats1 + &stats2;
+        let stats = stats1.clone() + &stats2;
 
         assert_eq!(stats.n_points, 20);
         test_almost_mat(&stats.mean_sum, &DVector::from_row_slice(&[

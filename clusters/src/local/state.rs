@@ -6,15 +6,17 @@ use std::vec::IntoIter;
 use nalgebra::{Dim, DMatrix, DVector, Dynamic, Matrix, RowDVector, RowVector, Storage};
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
+use remoc::RemoteSend;
 use statrs::distribution::{Continuous};
 use crate::clusters::SuperClusterStats;
 use crate::global::GlobalState;
 use crate::options::ModelOptions;
-use crate::stats::{ContinuousBatchwise, FromData, GaussianPrior, SufficientStats};
+use crate::stats::{ContinuousBatchwise, FromData, GaussianPrior, NIW, SufficientStats};
 use crate::utils::{col_normalize_log_weights, col_scatter, group_sort, replacement_sampling_weighted, row_normalize_log_weights};
 use crate::utils::Iterutils;
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LocalStats<P: GaussianPrior>(pub Vec<SuperClusterStats<P>>);
 
 impl<P: GaussianPrior> IntoIterator for LocalStats<P> {

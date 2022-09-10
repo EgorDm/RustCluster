@@ -1,4 +1,6 @@
 mod synthetic_2d_multithread;
+mod synthetic_2d_server;
+mod synthetic_2d_client;
 
 use std::thread;
 use crossbeam_channel::{bounded, Sender};

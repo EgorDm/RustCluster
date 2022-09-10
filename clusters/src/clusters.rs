@@ -5,8 +5,9 @@ use rand::distributions::Distribution;
 use rand::Rng;
 use statrs::distribution::{Dirichlet, MultivariateNormal};
 use crate::stats::{GaussianPrior, SufficientStats};
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SuperClusterParams<P: GaussianPrior> {
     pub prim: ClusterParams<P>,
     pub aux: [ClusterParams<P>; 2],
@@ -88,7 +89,7 @@ impl<P: GaussianPrior> SuperClusterParams<P> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SuperClusterStats<P: GaussianPrior> {
     pub prim: P::SuffStats,
     pub aux: [P::SuffStats; 2],
@@ -124,7 +125,7 @@ impl<P: GaussianPrior> SufficientStats for SuperClusterStats<P> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ClusterParams<P: GaussianPrior> {
     pub prior: P::HyperParams,
     pub post: P::HyperParams,
@@ -156,7 +157,7 @@ impl<P: GaussianPrior> ClusterParams<P> {
 }
 
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LLHistory {
     pub ll_history: VecDeque<f64>,
 }

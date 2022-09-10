@@ -2,6 +2,8 @@ use std::fmt::Debug;
 use std::ops::{Add, AddAssign};
 use nalgebra::{Dynamic, Matrix, Storage};
 use rand::Rng;
+use serde::{Deserialize, Serialize};
+use serde::de::DeserializeOwned;
 use statrs::distribution::MultivariateNormal;
 
 pub use niw::*;
@@ -9,8 +11,8 @@ pub use niw::*;
 mod niw;
 
 pub trait ConjugatePrior: Clone {
-    type HyperParams: PriorHyperParams + Debug + Clone + PartialEq;
-    type SuffStats: SufficientStats + FromData + Default + Debug + PartialEq;
+    type HyperParams: PriorHyperParams + Debug + Clone + PartialEq + Send + Serialize + DeserializeOwned + 'static;
+    type SuffStats: SufficientStats + FromData + Default + Debug + PartialEq + Send + Serialize + DeserializeOwned + 'static;
 
     fn posterior(
         prior: &Self::HyperParams,

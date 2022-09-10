@@ -7,8 +7,9 @@ use crate::local::LocalStats;
 use crate::options::{ModelOptions, OutlierRemoval};
 use crate::stats::dp::stick_breaking_sample;
 use crate::stats::GaussianPrior;
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GlobalState<P: GaussianPrior> {
     pub clusters: Vec<SuperClusterParams<P>>,
     pub weights: Vec<f64>,

@@ -1,9 +1,10 @@
 use std::ops::{AddAssign, MulAssign};
-use nalgebra::{DefaultAllocator, Dim, DVector, Dynamic, Matrix, Storage, StorageMut};
+use nalgebra::{DefaultAllocator, Dim, DMatrix, DVector, Dynamic, Matrix, Storage, StorageMut};
 use nalgebra::allocator::Allocator;
 use statrs::distribution::MultivariateNormal;
 use statrs::statistics::MeanN;
 use crate::utils::{col_broadcast_add, col_broadcast_sub};
+use serde::{Serialize, Deserialize};
 
 pub trait ContinuousBatchwise<K> {
     fn batchwise_pdf(
