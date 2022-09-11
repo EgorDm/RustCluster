@@ -8,12 +8,11 @@ use plotters::prelude::*;
 use rand::prelude::{SmallRng, StdRng};
 use rand::{Rng, SeedableRng};
 use clusters::clusters::SuperClusterParams;
-use clusters::state::{GlobalWorker, GlobalState};
+use clusters::state::{GlobalWorker, GlobalState, LocalState, LocalWorker};
 use clusters::metrics::normalized_mutual_info_score;
 use clusters::options::{FitOptions, ModelOptions};
 use clusters::plotting::{axes_range_from_points, Cluster2D, init_axes2d};
 use clusters::stats::{FromData, NIW, NIWStats, SufficientStats};
-use clusters::local::{LocalWorker, LocalWorker};
 
 fn plot<S: Storage<f64, Dynamic, Dynamic>>(
     path: &str,
@@ -68,21 +67,22 @@ fn main() {
     model_options.alpha = 100.0;
     model_options.outlier = None;
     let mut fit_options = FitOptions::default();
-    fit_options.init_clusters = 10;
+    fit_options.init_clusters = 1;
+    // fit_options.init_clusters = 10;
     // fit_options.iters = 20;
     // fit_options.iters = 40;
 
     let mut rng = StdRng::seed_from_u64(fit_options.seed);
-    let mut worker = LocalWorker::<NIW>::from_data(x.clone());
-    worker.init(fit_options.init_clusters, &mut rng);
+    let mut local = LocalState::<NIW>::from_data(x.clone());
+    local.init(fit_options.init_clusters, &mut rng);
 
-    let data_stats = worker.collect_data_stats();
-    let mut global_state = GlobalState::<NIW>::from_init(&data_stats, fit_options.init_clusters, &model_options, &mut rng);
+    let data_stats = local.collect_data_stats();
+    let mut global = GlobalState::<NIW>::from_init(&data_stats, fit_options.init_clusters, &model_options, &mut rng);
 
     // update_suff_stats_posterior!
-    let stats = worker.collect_cluster_stats(global_state.n_clusters());
-    global_state.update_clusters_post(stats);
-    global_state.update_sample_clusters(&model_options, &mut rng);
+    let stats = local.collect_cluster_stats(global.n_clusters());
+    global.update_clusters_post(stats);
+    global.update_sample_clusters(&model_options, &mut rng);
 
 
     // let plot_y = local_state.labels.select_rows(&plot_idx);
@@ -98,40 +98,40 @@ fn main() {
 
     for i in 0..fit_options.iters {
         let is_final = i >= fit_options.iters - fit_options.argmax_sample_stop;
-        let no_more_splits = i >= fit_options.iters - fit_options.iter_split_stop || global_state.n_clusters() >= fit_options.max_clusters;
+        let no_more_splits = i >= fit_options.iters - fit_options.iter_split_stop || global.n_clusters() >= fit_options.max_clusters;
 
         // Run step
         let now = Instant::now();
         {
-            global_state.update_sample_clusters(&model_options, &mut rng);
-            worker.apply_label_sampling(&global_state, is_final, &mut rng);
+            global.update_sample_clusters(&model_options, &mut rng);
+            local.apply_label_sampling(&global, is_final, &mut rng);
 
             // update_suff_stats_posterior!
-            let stats = worker.collect_cluster_stats(global_state.n_clusters());
-            global_state.update_clusters_post(stats);
+            let stats = local.collect_cluster_stats(global.n_clusters());
+            global.update_clusters_post(stats);
             // Remove reset bad clusters (concentrated subclusters)
-            let bad_clusters = GlobalState::collect_bad_clusters(&mut global_state);
-            worker.apply_cluster_reset(&bad_clusters, &mut rng);
+            let bad_clusters = global.collect_bad_clusters();
+            local.apply_cluster_reset(&bad_clusters, &mut rng);
 
             if !no_more_splits {
-                let split_idx = global_state.check_and_split(&model_options, &mut rng);
-                worker.apply_split(&split_idx, &mut rng);
+                let split_idx = global.check_and_split(&model_options, &mut rng);
+                local.apply_split(&split_idx, &mut rng);
 
                 if split_idx.len() > 0 {
-                    let stats = worker.collect_cluster_stats(global_state.n_clusters());
-                    global_state.update_clusters_post( stats);
+                    let stats = local.collect_cluster_stats(global.n_clusters());
+                    global.update_clusters_post( stats);
                 }
-                let merge_idx = global_state.check_and_merge(&model_options, &mut rng);
-                worker.apply_merge(&merge_idx);
+                let merge_idx = global.check_and_merge(&model_options, &mut rng);
+                local.apply_merge(&merge_idx);
             }
 
-            let removed_idx = global_state.collect_remove_clusters(&model_options);
-            worker.apply_cluster_remove(&removed_idx);
+            let removed_idx = global.collect_remove_clusters(&model_options);
+            local.apply_cluster_remove(&removed_idx);
         }
         let elapsed = now.elapsed();
 
-        let nmi = normalized_mutual_info_score(y.as_slice(), worker.labels.as_slice());
-        println!("Run iteration {} in {:.2?}; k={}, nmi={}", i, elapsed, global_state.n_clusters(), nmi);
+        let nmi = normalized_mutual_info_score(y.as_slice(), local.labels.as_slice());
+        println!("Run iteration {} in {:.2?}; k={}, nmi={}", i, elapsed, global.n_clusters(), nmi);
 
 
         // let plot_y = local_state.labels.select_columns(&plot_idx);
