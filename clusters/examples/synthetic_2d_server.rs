@@ -9,8 +9,8 @@ use remoc::rtc::CallError;
 use tokio::{net::TcpListener, sync::RwLock, time::sleep};
 
 use clusters::executor::rtc::{Counter, IncreaseError, TCP_PORT, CounterServerSharedMut};
-use clusters::global::GlobalState;
-use clusters::local::{LocalActions, LocalState, LocalStats};
+use clusters::state::GlobalState;
+use clusters::local::{LocalActions, LocalState, ThinStats};
 use clusters::options::ModelOptions;
 use clusters::stats::{NIW, NIWStats};
 
@@ -57,7 +57,7 @@ impl Counter for CounterObj {
         Ok(data_stats)
     }
 
-    async fn collect_stats(&self, n_clusters: usize) -> Result<LocalStats<NIW>, CallError> {
+    async fn collect_stats(&self, n_clusters: usize) -> Result<ThinStats<NIW>, CallError> {
        Ok(
            self.local_states.iter()
             .map(|local_state| LocalState::collect_stats(local_state, 0..n_clusters))
@@ -67,8 +67,8 @@ impl Counter for CounterObj {
 
     async fn update_sample_labels(&mut self, global_state: GlobalState<NIW>, is_final: bool) -> Result<(), CallError> {
         self.local_states.iter_mut().for_each(| local_state| {
-            LocalState::update_sample_prim_labels(&global_state, local_state, is_final, &mut self.rng);
-            LocalState::update_sample_aux_labels(&global_state, local_state, &mut self.rng);
+            LocalState::apply_sample_labels_prim(&global_state, local_state, is_final, &mut self.rng);
+            LocalState::apply_sample_labels_aux(&global_state, local_state, &mut self.rng);
         });
         Ok(())
     }

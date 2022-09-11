@@ -7,7 +7,7 @@ use plotters::prelude::*;
 use rand::prelude::{Distribution, StdRng};
 use rand::SeedableRng;
 use clusters::plotting::{Cluster2D, init_axes2d};
-use clusters::stats::{ConjugatePrior, GaussianPrior, NIW, NIWParams, NIWStats, SufficientStats};
+use clusters::stats::{ConjugatePrior, NormalConjugatePrior, NIW, NIWParams, NIWStats, SufficientStats};
 use statrs::distribution::{InverseWishart, MultivariateNormal};
 
 

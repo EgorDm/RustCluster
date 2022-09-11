@@ -14,13 +14,13 @@ use plotters::prelude::*;
 use rand::prelude::{SmallRng, StdRng};
 use rand::{Rng, SeedableRng};
 use clusters::clusters::SuperClusterParams;
-use clusters::global::{GlobalActions, GlobalState};
-use clusters::local::{LocalActions, LocalState};
 use clusters::metrics::normalized_mutual_info_score;
 use clusters::options::{FitOptions, ModelOptions};
 use clusters::plotting::{axes_range_from_points, Cluster2D, init_axes2d};
 use clusters::stats::{NIW, NIWStats, SufficientStats};
 use rayon::prelude::*;
+use clusters::state::{GlobalState, LocalWorker, ShardedState};
+use clusters::state::GlobalWorker;
 
 
 fn plot<S: Storage<f64, Dynamic, Dynamic>>(
@@ -80,27 +80,17 @@ fn main() {
     // fit_options.iters = 20;
     // fit_options.iters = 40;
 
-    let mut rng = StdRng::seed_from_u64(fit_options.seed + 1000);
-    let mut local_states = vec![];
-    for i in 0..10 {
-        local_states.push(
-            LocalState::<NIW>::from_init(
-                x.columns_range(i * 1000..(i + 1) * 1000).clone_owned(),
-                fit_options.init_clusters, &model_options, &mut rng,
-            )
-        )
-    }
+    let mut rng = StdRng::seed_from_u64(fit_options.seed);
+    let mut worker = ShardedState::from_data(x.clone(), 10);
+    worker.init(fit_options.init_clusters, &mut rng);
 
-    let data_stats = local_states.par_iter().map(LocalState::collect_data_stats).sum();
-    // let data_stats = local_states.iter().map(LocalState::collect_data_stats).sum();
+    let data_stats = worker.collect_data_stats();
     let mut global_state = GlobalState::<NIW>::from_init(&data_stats, fit_options.init_clusters, &model_options, &mut rng);
 
     // update_suff_stats_posterior!
-    let stats = local_states.iter()
-        .map(|local_state| LocalState::collect_stats(local_state, 0..global_state.n_clusters()))
-        .sum();
-    GlobalState::update_clusters_post(&mut global_state, stats);
-    GlobalState::update_sample_clusters(&mut global_state, &model_options, &mut rng);
+    let stats = worker.collect_cluster_stats(global_state.n_clusters());
+    global_state.update_clusters_post(stats);
+    global_state.update_sample_clusters(&model_options, &mut rng);
 
 
     // let plot_y = local_state.labels.select_rows(&plot_idx);
@@ -121,54 +111,40 @@ fn main() {
         // Run step
         let now = Instant::now();
         {
-            GlobalState::update_sample_clusters(&mut global_state, &model_options, &mut rng);
+            global_state.update_sample_clusters(&model_options, &mut rng);
+            worker.apply_label_sampling(&global_state, is_final, &mut rng);
 
-            local_states.par_iter_mut().for_each_with(rng.clone(), |mut rng, local_state| {
-                LocalState::update_sample_labels(local_state, &global_state, is_final, &mut rng);
-            });
             // update_suff_stats_posterior!
-            let stats = local_states.par_iter()
-                .map(|local_state| LocalState::collect_stats(local_state, 0..global_state.n_clusters()))
-                .sum();
-            GlobalState::update_clusters_post(&mut global_state, stats);
+            let stats = worker.collect_cluster_stats(global_state.n_clusters());
+            global_state.update_clusters_post(stats);
             // Remove reset bad clusters (concentrated subclusters)
             let bad_clusters = GlobalState::collect_bad_clusters(&mut global_state);
-            local_states.par_iter_mut().for_each_with(rng.clone(), |mut rng, local_state| {
-                LocalState::update_reset_clusters(local_state, &bad_clusters, &mut rng);
-            });
+            worker.apply_cluster_reset(&bad_clusters, &mut rng);
 
             if !no_more_splits {
-                let split_idx = GlobalActions::check_and_split(&mut global_state, &model_options, &mut rng);
-                local_states.par_iter_mut().for_each_with(rng.clone(), |mut rng, local_state| {
-                    LocalActions::apply_split(local_state, &split_idx, &mut rng);
-                });
+                let split_idx = global_state.check_and_split(&model_options, &mut rng);
+                worker.apply_split(&split_idx, &mut rng);
 
                 if split_idx.len() > 0 {
-                    let stats = local_states.par_iter()
-                        .map(|local_state| LocalState::collect_stats(local_state, 0..global_state.n_clusters()))
-                        .sum();
-                    GlobalState::update_clusters_post(&mut global_state, stats);
+                    let stats = worker.collect_cluster_stats(global_state.n_clusters());
+                    global_state.update_clusters_post( stats);
                 }
-                let merge_idx = GlobalActions::check_and_merge(&mut global_state, &model_options, &mut rng);
-                local_states.par_iter_mut().for_each(|local_state| {
-                    LocalActions::apply_merge(local_state, &merge_idx);
-                });
+                let merge_idx = global_state.check_and_merge(&model_options, &mut rng);
+                worker.apply_merge(&merge_idx);
             }
 
-            let removed_idx = GlobalState::update_remove_empty_clusters(&mut global_state, &model_options);
-            local_states.par_iter_mut().for_each(|local_state| {
-                LocalState::update_remove_clusters(local_state, &removed_idx);
-            });
+            let removed_idx = global_state.collect_remove_clusters(&model_options);
+            worker.apply_cluster_remove(&removed_idx);
         }
         let elapsed = now.elapsed();
 
-        let mut nmi: f64 = local_states.par_iter().enumerate().map(|(i, local_state)| {
+        let mut nmi: f64 = worker.shards.par_iter().enumerate().map(|(i, local_state)| {
             normalized_mutual_info_score(
                 y.columns_range(i * 1000..(i + 1) * 1000).clone_owned().as_slice(),
                 local_state.labels.as_slice(),
             )
         }).sum();
-        nmi /= local_states.len() as f64;
+        nmi /= worker.n_shards() as f64;
 
         println!("Run iteration {} in {:.2?}; k={}, nmi={}", i, elapsed, global_state.n_clusters(), nmi);
 

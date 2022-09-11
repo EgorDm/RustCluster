@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::iter::Sum;
 use std::ops::{Add, AddAssign};
 use nalgebra::{Dynamic, Matrix, Storage};
 use rand::Rng;
@@ -11,8 +12,8 @@ pub use niw::*;
 mod niw;
 
 pub trait ConjugatePrior: Clone {
-    type HyperParams: PriorHyperParams + Debug + Clone + PartialEq + Send + Serialize + DeserializeOwned + 'static;
-    type SuffStats: SufficientStats + FromData + Default + Debug + PartialEq + Send + Serialize + DeserializeOwned + 'static;
+    type HyperParams: PriorHyperParams + Debug + Clone + PartialEq + Send + Sync + Serialize + DeserializeOwned + 'static;
+    type SuffStats: SufficientStats + FromData + Default + Debug + PartialEq + Send + Sync + Serialize + DeserializeOwned + 'static;
 
     fn posterior(
         prior: &Self::HyperParams,
@@ -44,10 +45,11 @@ pub trait FromData {
 pub trait SufficientStats: Sized + Clone
 + for<'a> Add<&'a Self, Output=Self>
 + for<'a> AddAssign<&'a Self>
++ Sum
 {
     fn n_points(&self) -> usize;
 }
 
-pub trait GaussianPrior: ConjugatePrior {
+pub trait NormalConjugatePrior: ConjugatePrior {
     fn sample<R: Rng + ?Sized>(prior: &Self::HyperParams, rng: &mut R) -> MultivariateNormal;
 }

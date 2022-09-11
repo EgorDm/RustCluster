@@ -4,7 +4,7 @@ use std::time::Instant;
 use rand::prelude::*;
 use tokio::net::TcpStream;
 use clusters::executor::rtc::{TCP_PORT, CounterClient, Counter};
-use clusters::global::{GlobalActions, GlobalState};
+use clusters::state::{GlobalActions, GlobalState};
 use clusters::options::{FitOptions, ModelOptions};
 use clusters::stats::NIW;
 

@@ -1,16 +1,18 @@
 use std::collections::VecDeque;
 use std::fmt::Debug;
+use std::iter::Sum;
 use std::ops::{Add, AddAssign};
+use std::vec::IntoIter;
 use nalgebra::DVector;
 use rand::distributions::Distribution;
 use rand::Rng;
 use statrs::distribution::{Dirichlet, MultivariateNormal};
-use crate::stats::{GaussianPrior, SufficientStats};
+use crate::stats::{NormalConjugatePrior, SufficientStats};
 use serde::{Serialize, Deserialize};
 use serde::de::DeserializeOwned;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SuperClusterParams<P: GaussianPrior> {
+pub struct SuperClusterParams<P: NormalConjugatePrior> {
     pub prim: ClusterParams<P>,
     pub aux: [ClusterParams<P>; 2],
     pub weights: [f64; 2],
@@ -18,7 +20,7 @@ pub struct SuperClusterParams<P: GaussianPrior> {
     pub ll_history: LLHistory,
 }
 
-impl<P: GaussianPrior> SuperClusterParams<P> {
+impl<P: NormalConjugatePrior> SuperClusterParams<P> {
     pub fn from_split_params<R: Rng>(
         prim: ClusterParams<P>,
         alpha: f64,
@@ -92,18 +94,18 @@ impl<P: GaussianPrior> SuperClusterParams<P> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SuperClusterStats<P: GaussianPrior> {
+pub struct SuperClusterStats<P: NormalConjugatePrior> {
     pub prim: P::SuffStats,
     pub aux: [P::SuffStats; 2],
 }
 
-impl<P: GaussianPrior> SuperClusterStats<P> {
+impl<P: NormalConjugatePrior> SuperClusterStats<P> {
     pub fn new(prim: P::SuffStats, aux: [P::SuffStats; 2]) -> Self {
         SuperClusterStats { prim, aux }
     }
 }
 
-impl<'a, P: GaussianPrior> Add<&'a Self> for SuperClusterStats<P> {
+impl<'a, P: NormalConjugatePrior> Add<&'a Self> for SuperClusterStats<P> {
     type Output = Self;
 
     fn add(mut self, rhs: &'a Self) -> Self::Output {
@@ -112,7 +114,7 @@ impl<'a, P: GaussianPrior> Add<&'a Self> for SuperClusterStats<P> {
     }
 }
 
-impl<'a, P: GaussianPrior> AddAssign<&'a Self> for SuperClusterStats<P> {
+impl<'a, P: NormalConjugatePrior> AddAssign<&'a Self> for SuperClusterStats<P> {
     fn add_assign(&mut self, rhs: &'a Self) {
         self.prim += &rhs.prim;
         for (i, rhs_aux) in rhs.aux.iter().enumerate() {
@@ -121,21 +123,31 @@ impl<'a, P: GaussianPrior> AddAssign<&'a Self> for SuperClusterStats<P> {
     }
 }
 
-impl<P: GaussianPrior> SufficientStats for SuperClusterStats<P> {
+impl<P: NormalConjugatePrior> Sum for SuperClusterStats<P> {
+    fn sum<I: Iterator<Item=Self>>(mut iter: I) -> Self {
+        let res = iter.next().expect("Cannot sum over empty iterator");
+        iter.fold(res, |mut acc, x| {
+            acc += &x;
+            acc
+        })
+    }
+}
+
+impl<P: NormalConjugatePrior> SufficientStats for SuperClusterStats<P> {
     fn n_points(&self) -> usize {
         self.prim.n_points()
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ClusterParams<P: GaussianPrior> {
+pub struct ClusterParams<P: NormalConjugatePrior> {
     pub prior: P::HyperParams,
     pub post: P::HyperParams,
     pub stats: P::SuffStats,
     pub dist: MultivariateNormal,
 }
 
-impl<P: GaussianPrior> ClusterParams<P> {
+impl<P: NormalConjugatePrior> ClusterParams<P> {
     pub fn new(prior: P::HyperParams, post: P::HyperParams, stats: P::SuffStats, dist: MultivariateNormal) -> Self {
         Self { prior, post, stats, dist }
     }
@@ -197,7 +209,7 @@ impl LLHistory {
 }
 
 
-pub trait ThinClusterParams: Clone + Send + Serialize + DeserializeOwned {
+pub trait ThinParams: Clone + Send + Sync + Serialize + DeserializeOwned {
     fn n_clusters(&self) -> usize;
 
     fn cluster_dist(&self, cluster_id: usize) -> &MultivariateNormal;
@@ -207,4 +219,56 @@ pub trait ThinClusterParams: Clone + Send + Serialize + DeserializeOwned {
     fn cluster_aux_dist(&self, cluster_id: usize, aux_id: usize) -> &MultivariateNormal;
 
     fn cluster_aux_weights(&self, cluster_id: usize) -> &[f64; 2];
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThinStats<P: NormalConjugatePrior>(pub Vec<SuperClusterStats<P>>);
+
+impl<P: NormalConjugatePrior> IntoIterator for ThinStats<P> {
+    type Item = SuperClusterStats<P>;
+    type IntoIter = IntoIter<SuperClusterStats<P>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<'a, P: NormalConjugatePrior> Add<&'a Self> for ThinStats<P> {
+    type Output = Self;
+
+    fn add(mut self, rhs: &'a Self) -> Self::Output {
+        self += rhs;
+        self
+    }
+}
+
+impl<'a, P: NormalConjugatePrior> AddAssign<&'a Self> for ThinStats<P> {
+    fn add_assign(&mut self, rhs: &'a Self) {
+        for (l, r) in self.0.iter_mut().zip(rhs.0.iter()) {
+            *l += r;
+        }
+    }
+}
+
+impl<P: NormalConjugatePrior> SufficientStats for ThinStats<P> {
+    fn n_points(&self) -> usize {
+        self.0.iter().map(|x| x.n_points()).sum()
+    }
+}
+
+impl<P: NormalConjugatePrior> Default for ThinStats<P> {
+    fn default() -> Self {
+        Self(Vec::new())
+    }
+}
+
+impl<P: NormalConjugatePrior> Sum for ThinStats<P> {
+    fn sum<I: Iterator<Item=Self>>(mut iter: I) -> Self {
+        let mut res = iter.next().unwrap_or_default();
+        for x in iter {
+            res += &x;
+        }
+        res
+    }
 }

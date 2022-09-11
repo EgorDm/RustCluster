@@ -6,7 +6,7 @@ use rand::Rng;
 use statrs::consts::LN_PI;
 use statrs::distribution::{InverseWishart, MultivariateNormal};
 use statrs::function::gamma::mvlgamma;
-use crate::stats::{ConjugatePrior, Covariance, FromData, GaussianPrior, PriorHyperParams, SufficientStats};
+use crate::stats::{ConjugatePrior, Covariance, FromData, NormalConjugatePrior, PriorHyperParams, SufficientStats};
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -154,7 +154,7 @@ impl ConjugatePrior for NIW {
     }
 }
 
-impl GaussianPrior for NIW {
+impl NormalConjugatePrior for NIW {
     fn sample<R: Rng + ?Sized>(prior: &Self::HyperParams, rng: &mut R) -> MultivariateNormal {
         prior.sample(rng)
     }

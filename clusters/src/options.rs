@@ -1,13 +1,13 @@
-use crate::stats::{GaussianPrior, PriorHyperParams};
+use crate::stats::{NormalConjugatePrior, PriorHyperParams};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct OutlierRemoval<P: GaussianPrior> {
+pub struct OutlierRemoval<P: NormalConjugatePrior> {
     pub weight: f64,
     pub dist: P::HyperParams,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ModelOptions<P: GaussianPrior> {
+pub struct ModelOptions<P: NormalConjugatePrior> {
     pub data_dist: P::HyperParams,
     pub alpha: f64,
     pub dim: usize,
@@ -16,7 +16,7 @@ pub struct ModelOptions<P: GaussianPrior> {
     pub hard_assignment: bool,
 }
 
-impl<P: GaussianPrior> ModelOptions<P> {
+impl<P: NormalConjugatePrior> ModelOptions<P> {
     pub fn default(dim: usize) -> Self {
         Self {
             data_dist: P::HyperParams::default(dim),
