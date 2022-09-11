@@ -174,12 +174,14 @@ impl<P: NormalConjugatePrior> ClusterParams<P> {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LLHistory {
     pub ll_history: VecDeque<f64>,
+    pub capacity: usize,
 }
 
 impl LLHistory {
     pub fn new(burnout_period: usize) -> Self {
         LLHistory {
             ll_history: VecDeque::with_capacity(burnout_period + 5),
+            capacity: burnout_period + 5,
         }
     }
 
@@ -188,7 +190,7 @@ impl LLHistory {
     }
 
     pub fn push(&mut self, ll: f64) {
-        if self.ll_history.len() == self.ll_history.capacity() {
+        if self.ll_history.len() == self.capacity {
             self.ll_history.pop_back();
         }
         self.ll_history.push_front(ll);
