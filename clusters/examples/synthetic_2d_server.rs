@@ -67,8 +67,8 @@ impl Counter for CounterObj {
 
     async fn update_sample_labels(&mut self, global_state: GlobalState<NIW>, is_final: bool) -> Result<(), CallError> {
         self.local_states.iter_mut().for_each(| local_state| {
-            LocalState::update_sample_labels(&global_state, local_state, is_final, &mut self.rng);
-            LocalState::update_sample_labels_aux(&global_state, local_state, &mut self.rng);
+            LocalState::update_sample_prim_labels(&global_state, local_state, is_final, &mut self.rng);
+            LocalState::update_sample_aux_labels(&global_state, local_state, &mut self.rng);
         });
         Ok(())
     }

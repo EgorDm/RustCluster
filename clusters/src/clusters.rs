@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::fmt::Debug;
 use std::ops::{Add, AddAssign};
 use nalgebra::DVector;
 use rand::distributions::Distribution;
@@ -6,6 +7,7 @@ use rand::Rng;
 use statrs::distribution::{Dirichlet, MultivariateNormal};
 use crate::stats::{GaussianPrior, SufficientStats};
 use serde::{Serialize, Deserialize};
+use serde::de::DeserializeOwned;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SuperClusterParams<P: GaussianPrior> {
@@ -47,12 +49,12 @@ impl<P: GaussianPrior> SuperClusterParams<P> {
         burnout_period: usize,
         rng: &mut R,
     ) -> Self {
-        let stats = prim_l.stats.clone()  + &prim_r.stats;
+        let stats = prim_l.stats.clone() + &prim_r.stats;
         let post = P::posterior(&prim_l.prior, &stats);
         let prim = ClusterParams::new(prim_l.prior.clone(), post, stats, prim_r.dist.clone());
 
         let dir = Dirichlet::new(DVector::from_vec(vec![
-            prim_l.stats.n_points() as f64 + alpha / 2.0, prim_r.stats.n_points() as f64 + alpha / 2.0
+            prim_l.stats.n_points() as f64 + alpha / 2.0, prim_r.stats.n_points() as f64 + alpha / 2.0,
         ])).unwrap();
         let weights = dir.sample(rng).as_slice().try_into().unwrap();
 
@@ -74,7 +76,7 @@ impl<P: GaussianPrior> SuperClusterParams<P> {
         let aux = [self.aux[0].sample(rng), self.aux[1].sample(rng)];
 
         let dir = Dirichlet::new(DVector::from_vec(vec![
-            self.aux[0].stats.n_points() as f64 + alpha / 2.0, self.aux[1].stats.n_points() as f64 + alpha / 2.0
+            self.aux[0].stats.n_points() as f64 + alpha / 2.0, self.aux[1].stats.n_points() as f64 + alpha / 2.0,
         ])).unwrap();
         let weights = dir.sample(rng).as_slice().try_into().unwrap();
 
@@ -194,3 +196,15 @@ impl LLHistory {
     }
 }
 
+
+pub trait ThinClusterParams: Clone + Send + Serialize + DeserializeOwned {
+    fn n_clusters(&self) -> usize;
+
+    fn cluster_dist(&self, cluster_id: usize) -> &MultivariateNormal;
+
+    fn cluster_weights(&self) -> &[f64];
+
+    fn cluster_aux_dist(&self, cluster_id: usize, aux_id: usize) -> &MultivariateNormal;
+
+    fn cluster_aux_weights(&self, cluster_id: usize) -> &[f64; 2];
+}

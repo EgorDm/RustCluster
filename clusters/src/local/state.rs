@@ -8,7 +8,7 @@ use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
 use remoc::RemoteSend;
 use statrs::distribution::{Continuous};
-use crate::clusters::SuperClusterStats;
+use crate::clusters::{SuperClusterStats, ThinClusterParams};
 use crate::global::GlobalState;
 use crate::options::ModelOptions;
 use crate::stats::{ContinuousBatchwise, FromData, GaussianPrior, NIW, SufficientStats};
@@ -114,18 +114,28 @@ impl<P: GaussianPrior> LocalState<P> {
         )
     }
 
-    pub fn update_sample_labels<R: Rng>(
-        global: &GlobalState<P>,
+    pub fn update_sample_labels(
         local: &mut LocalState<P>,
+        params: &impl ThinClusterParams,
         is_final: bool,
-        rng: &mut R,
+        rng: &mut impl Rng,
+    ) {
+        Self::update_sample_prim_labels(local, params, is_final, rng);
+        Self::update_sample_aux_labels(local, params, rng);
+    }
+
+    pub fn update_sample_prim_labels(
+        local: &mut LocalState<P>,
+        params: &impl ThinClusterParams,
+        is_final: bool,
+        rng: &mut impl Rng,
     ) {
         // Calculate log likelihood for each point
-        let ln_weights = global.weights.iter().map(|w| w.ln()).collect::<Vec<_>>();
-        let mut ll = DMatrix::zeros(global.clusters.len(), local.n_points());
-        for (k, cluster) in global.clusters.iter().enumerate() {
+        let ln_weights = params.cluster_weights().iter().map(|w| w.ln()).collect::<Vec<_>>();
+        let mut ll = DMatrix::zeros(params.n_clusters(), local.n_points());
+        for k in 0..params.n_clusters() {
             ll.row_mut(k).copy_from_slice(
-                cluster.prim.dist.batchwise_ln_pdf(local.data.clone_owned()).as_slice()
+                params.cluster_dist(k).batchwise_ln_pdf(local.data.clone_owned()).as_slice()
             );
         }
         for (k, mut row) in ll.row_iter_mut().enumerate() {
@@ -143,13 +153,13 @@ impl<P: GaussianPrior> LocalState<P> {
         }
     }
 
-    pub fn update_sample_labels_aux<R: Rng>(
-        global: &GlobalState<P>,
+    pub fn update_sample_aux_labels(
         local: &mut LocalState<P>,
-        rng: &mut R,
+        params: &impl ThinClusterParams,
+        rng: &mut impl Rng,
     ) {
         // Split data points into contiguous blocks (indexes only for now)
-        let (indices, offsets) = local.sorted_indices(global.clusters.len());
+        let (indices, offsets) = local.sorted_indices(params.n_clusters());
 
         // Sample pdf for each block and scatter them back in order to local.data
         let mut ll = DMatrix::zeros(2, local.n_points());
@@ -158,12 +168,8 @@ impl<P: GaussianPrior> LocalState<P> {
             let block = local.data.select_columns(indices);
 
             let (prim, aux) = (block_id / 2, block_id % 2);
-            let probs = global.clusters[prim].aux[aux].dist.batchwise_ln_pdf(block).transpose();
-            col_scatter(
-                &mut ll.row_mut(aux),
-                indices,
-                &probs,
-            );
+            let probs = params.cluster_aux_dist(prim, aux).batchwise_ln_pdf(block).transpose();
+            col_scatter(&mut ll.row_mut(aux), indices, &probs);
         }
 
         // Sample labels

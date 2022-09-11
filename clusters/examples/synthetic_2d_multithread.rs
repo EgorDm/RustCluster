@@ -124,8 +124,7 @@ fn main() {
             GlobalState::update_sample_clusters(&mut global_state, &model_options, &mut rng);
 
             local_states.par_iter_mut().for_each_with(rng.clone(), |mut rng, local_state| {
-                LocalState::update_sample_labels(&global_state, local_state, is_final, &mut rng);
-                LocalState::update_sample_labels_aux(&global_state, local_state, &mut rng);
+                LocalState::update_sample_labels(local_state, &global_state, is_final, &mut rng);
             });
             // update_suff_stats_posterior!
             let stats = local_states.par_iter()

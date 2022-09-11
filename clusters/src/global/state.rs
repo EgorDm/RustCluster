@@ -1,13 +1,15 @@
 use nalgebra::{DVector};
 use rand::distributions::{Distribution};
 use rand::Rng;
-use statrs::distribution::{Dirichlet};
-use crate::clusters::{ClusterParams, SuperClusterParams};
+use statrs::distribution::{Dirichlet, MultivariateNormal};
+use crate::clusters::{ClusterParams, SuperClusterParams, ThinClusterParams};
 use crate::local::LocalStats;
 use crate::options::{ModelOptions, OutlierRemoval};
 use crate::stats::dp::stick_breaking_sample;
 use crate::stats::GaussianPrior;
 use serde::{Serialize, Deserialize};
+use serde::de::DeserializeOwned;
+use crate::utils::each_ref;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GlobalState<P: GaussianPrior> {
@@ -95,7 +97,7 @@ impl<P: GaussianPrior> GlobalState<P> {
 
     pub fn update_clusters_post(
         global: &mut GlobalState<P>,
-        stats: LocalStats<P>
+        stats: LocalStats<P>,
     ) {
         for (k, stats) in stats.0.into_iter().enumerate() {
             global.clusters[k].update_post(stats)
@@ -136,5 +138,27 @@ impl<P: GaussianPrior> GlobalState<P> {
         }
         global.clusters = new_clusters;
         removed_cluster_idx
+    }
+}
+
+impl<P: GaussianPrior + Serialize + DeserializeOwned> ThinClusterParams for GlobalState<P> {
+    fn n_clusters(&self) -> usize {
+        self.n_clusters()
+    }
+
+    fn cluster_dist(&self, cluster_id: usize) -> &MultivariateNormal {
+        &self.clusters[cluster_id].prim.dist
+    }
+
+    fn cluster_weights(&self) -> &[f64] {
+        self.weights.as_slice()
+    }
+
+    fn cluster_aux_dist(&self, cluster_id: usize, aux_id: usize) -> &MultivariateNormal {
+        &self.clusters[cluster_id].aux[aux_id].dist
+    }
+
+    fn cluster_aux_weights(&self, cluster_id: usize) -> &[f64; 2] {
+        &self.clusters[cluster_id].weights
     }
 }

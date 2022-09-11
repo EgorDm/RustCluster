@@ -13,7 +13,7 @@ use clusters::local::{LocalActions, LocalState};
 use clusters::metrics::normalized_mutual_info_score;
 use clusters::options::{FitOptions, ModelOptions};
 use clusters::plotting::{axes_range_from_points, Cluster2D, init_axes2d};
-use clusters::stats::{NIW, NIWStats, SufficientStats};
+use clusters::stats::{FromData, NIW, NIWStats, SufficientStats};
 
 fn plot<S: Storage<f64, Dynamic, Dynamic>>(
     path: &str,
@@ -103,8 +103,7 @@ fn main() {
         let now = Instant::now();
         {
             GlobalState::update_sample_clusters(&mut global_state, &model_options, &mut rng);
-            LocalState::update_sample_labels(&global_state, &mut local_state, is_final, &mut rng);
-            LocalState::update_sample_labels_aux(&global_state, &mut local_state, &mut rng);
+            LocalState::update_sample_labels(&mut local_state, &global_state, is_final, &mut rng);
             // update_suff_stats_posterior!
             let stats = LocalState::<NIW>::collect_stats(&local_state, 0..global_state.n_clusters());
             GlobalState::update_clusters_post(&mut global_state, stats);
