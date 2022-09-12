@@ -3,6 +3,28 @@ use rand::distributions::uniform::SampleUniform;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
 
+pub fn reservoir_sampling<T: Copy, I: Iterator<Item=T>>(
+    rng: &mut impl Rng,
+    mut src: I,
+    dst: &mut [I::Item]
+) -> usize {
+    let mut n = 0;
+    for (dst_val,  src_val) in dst.iter_mut().zip(src.by_ref()) {
+        *dst_val = src_val;
+        n += 1;
+    }
+
+    let mut i = n;
+    for v in src {
+        let j = rng.gen_range(0..i);
+        if j < dst.len() {
+            dst[j] = v;
+        }
+        i += 1;
+    }
+    n
+}
+
 pub fn reservoir_sampling_weighted<
     W: Float + SampleUniform, I: Iterator<Item=W>
 >(

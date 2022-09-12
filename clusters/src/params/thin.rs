@@ -17,6 +17,11 @@ pub trait ThinParams: Clone + Send + Sync + Serialize + DeserializeOwned {
     fn cluster_aux_dist(&self, cluster_id: usize, aux_id: usize) -> &MultivariateNormal;
 
     fn cluster_aux_weights(&self, cluster_id: usize) -> &[f64; 2];
+
+    fn n_params(&self) -> usize {
+        let dim = self.cluster_dist(0).mu().len();
+        self.n_clusters() * (dim * dim + dim + 1)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -112,7 +117,7 @@ pub trait MixtureParams {
     fn predict(&self, data: DMatrix<f64>) -> (DMatrix<f64>, RowDVector<usize>) {
         let mut labels = RowDVector::zeros(data.ncols());
         let mut log_likelihood = self.log_likelihood(data);
-        hard_assignment(log_likelihood.clone_owned(), labels.as_mut_slice());
+        hard_assignment(&log_likelihood, labels.as_mut_slice());
         let probs = col_normalize_log_weights(log_likelihood);
 
         (probs, labels)
@@ -121,7 +126,7 @@ pub trait MixtureParams {
 
 
 pub fn hard_assignment(
-    log_likelihood: DMatrix<f64>,
+    log_likelihood: &DMatrix<f64>,
     labels: &mut [usize],
 ) {
     for (i, row) in log_likelihood.column_iter().enumerate() {

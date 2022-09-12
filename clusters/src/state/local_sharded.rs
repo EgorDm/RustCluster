@@ -1,7 +1,8 @@
+use itertools::Itertools;
 use nalgebra::DMatrix;
 use rand::Rng;
 use rayon::prelude::*;
-use crate::params::clusters::ThinStats;
+use crate::params::clusters::SuperClusterStats;
 use crate::params::thin::ThinParams;
 use crate::state::{LocalState, LocalWorker};
 use crate::stats::NormalConjugatePrior;
@@ -48,10 +49,19 @@ impl<P: NormalConjugatePrior> LocalWorker<P> for ShardedState<P> {
         self.shards.par_iter().map(LocalWorker::<P>::collect_data_stats).sum()
     }
 
-    fn collect_cluster_stats(&self, n_clusters: usize) -> ThinStats<P> {
-        self.shards.iter()
+    fn collect_cluster_stats(&self, n_clusters: usize) -> Vec<SuperClusterStats<P>> {
+        let mut full: Vec<_> = self.shards.par_iter()
             .map(|shard| shard.collect_cluster_stats(n_clusters))
-            .sum()
+            .collect();
+        let mut iter = full.into_iter();
+
+        let first = iter.next().unwrap();
+        iter.fold(first, |mut stats, next_stats| {
+            for (i, stat) in stats.iter_mut().enumerate() {
+                *stat += &next_stats[i];
+            }
+            stats
+        })
     }
 
     fn apply_label_sampling<R: Rng + Clone + Send + Sync>(

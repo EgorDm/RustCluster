@@ -4,7 +4,7 @@ use rand::Rng;
 use statrs::distribution::{Dirichlet, MultivariateNormal};
 use serde::{Serialize, Deserialize};
 use serde::de::DeserializeOwned;
-use crate::params::clusters::{ClusterParams, SuperClusterParams, ThinStats};
+use crate::params::clusters::{ClusterParams, SuperClusterParams, SuperClusterStats};
 use crate::params::options::{ModelOptions, OutlierRemoval};
 use crate::params::thin::ThinParams;
 use crate::stats::{NormalConjugatePrior, SplitMerge, stick_breaking_sample};
@@ -68,8 +68,8 @@ impl<P: NormalConjugatePrior> GlobalWorker<P> for GlobalState<P> {
         self.clusters.iter().map(|c| c.n_points()).sum()
     }
 
-    fn update_clusters_post(&mut self, stats: ThinStats<P>) {
-        for (k, stats) in stats.0.into_iter().enumerate() {
+    fn update_clusters_post(&mut self, stats: Vec<SuperClusterStats<P>>) {
+        for (k, stats) in stats.into_iter().enumerate() {
             self.clusters[k].update_post(stats)
         }
     }

@@ -14,7 +14,7 @@ use crate::stats::{ContinuousBatchwise, FromData, NormalConjugatePrior, NIW, Suf
 use crate::utils::{col_normalize_log_weights, col_scatter, group_sort, replacement_sampling_weighted, row_normalize_log_weights};
 use crate::utils::Iterutils;
 use serde::{Serialize, Deserialize};
-use crate::params::clusters::{SuperClusterStats, ThinStats};
+use crate::params::clusters::{SuperClusterStats};
 use crate::params::thin::{AuxMixtureParams, hard_assignment, MixtureParams, soft_assignment, SuperMixtureParams, ThinParams};
 use crate::state::LocalWorker;
 use crate::stats::test_almost_mat;
@@ -58,7 +58,7 @@ impl<P: NormalConjugatePrior> LocalState<P> {
 
         // Sample labels
         if hard_assign {
-            hard_assignment(ll, self.labels.as_mut_slice());
+            hard_assignment(&ll, self.labels.as_mut_slice());
         } else {
             soft_assignment(ll, self.labels.as_mut_slice(), rng);
         }
@@ -86,7 +86,7 @@ impl<P: NormalConjugatePrior> LocalState<P> {
 
         // Sample labels
         if hard_assign {
-            hard_assignment(ll, self.labels_aux.as_mut_slice());
+            hard_assignment(&ll, self.labels_aux.as_mut_slice());
         } else {
             soft_assignment(ll, self.labels_aux.as_mut_slice(), rng);
         }
@@ -120,7 +120,7 @@ impl<P: NormalConjugatePrior> LocalWorker<P> for LocalState<P> {
         P::SuffStats::from_data(&self.data)
     }
 
-    fn collect_cluster_stats(&self, n_clusters: usize) -> ThinStats<P> {
+    fn collect_cluster_stats(&self, n_clusters: usize) -> Vec<SuperClusterStats<P>> {
         // Split data points into contiguous blocks (indexes only for now)
         let (indices, offsets) = self.sorted_indices(n_clusters);
 
@@ -140,7 +140,7 @@ impl<P: NormalConjugatePrior> LocalWorker<P> for LocalState<P> {
             });
         }
 
-        ThinStats(stats)
+        stats
     }
 
     fn apply_label_sampling<R: Rng + Clone + Send + Sync>(

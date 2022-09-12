@@ -7,10 +7,10 @@ use ndarray_npy::read_npy;
 use plotters::prelude::*;
 use rand::prelude::{SmallRng, StdRng};
 use rand::{Rng, SeedableRng};
-use clusters::clusters::SuperClusterParams;
 use clusters::state::{GlobalWorker, GlobalState, LocalState, LocalWorker};
-use clusters::metrics::normalized_mutual_info_score;
+use clusters::metrics::{EvaluationData, NMI, normalized_mutual_info_score};
 use clusters::model::Model;
+use clusters::params::clusters::SuperClusterParams;
 use clusters::params::options::{FitOptions, ModelOptions};
 use clusters::plotting::{axes_range_from_points, Cluster2D, init_axes2d};
 use clusters::stats::{FromData, NIW, NIWStats, SufficientStats};
@@ -77,6 +77,11 @@ fn main() {
     model.fit(
         x.clone_owned(),
         &fit_options,
+        Some(EvaluationData {
+            points: x.clone_owned(),
+            labels: Some(y.clone_owned()),
+        }),
+        Some(NMI),
     );
 
     // let mut rng = SmallRng::seed_from_u64(fit_options.seed+1);

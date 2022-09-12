@@ -7,7 +7,7 @@ pub use local::{LocalState};
 pub use local_sharded::ShardedState;
 
 use rand::Rng;
-use crate::params::clusters::ThinStats;
+use crate::params::clusters::SuperClusterStats;
 use crate::params::options::ModelOptions;
 use crate::params::thin::ThinParams;
 use crate::stats::NormalConjugatePrior;
@@ -23,7 +23,7 @@ pub trait GlobalWorker<P: NormalConjugatePrior> {
 
     fn n_points(&self) -> usize;
 
-    fn update_clusters_post(&mut self, stats: ThinStats<P>);
+    fn update_clusters_post(&mut self, stats: Vec<SuperClusterStats<P>>);
 
     fn update_sample_clusters<R: Rng>(&mut self, options: &ModelOptions<P>, rng: &mut R);
 
@@ -47,7 +47,7 @@ pub trait LocalWorker<P: NormalConjugatePrior> {
 
     fn collect_data_stats(&self) -> P::SuffStats;
 
-    fn collect_cluster_stats(&self, n_clusters: usize) -> ThinStats<P>;
+    fn collect_cluster_stats(&self, n_clusters: usize) -> Vec<SuperClusterStats<P>>;
 
     fn apply_label_sampling<R: Rng + Clone + Send + Sync>(
         &mut self,

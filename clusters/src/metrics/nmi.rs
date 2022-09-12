@@ -6,6 +6,8 @@ use itertools::Itertools;
 use num_traits::{FromPrimitive, PrimInt};
 use num_traits::real::Real;
 use simba::scalar::SupersetOf;
+use crate::metrics::{EvaluationData, Metric};
+use crate::params::thin::{MixtureParams, SuperMixtureParams, ThinParams};
 use crate::utils::{unique_with_indices};
 
 pub fn contingency_matrix<T: Copy + Hash + Eq + Ord>(
@@ -103,6 +105,29 @@ pub fn normalized_mutual_info_score<T: Copy + Hash + Eq + Ord>(
     let h_pred = entropy(labels_pred).unwrap();
 
     2.0 * mi / (h_true + h_pred)
+}
+
+pub struct NMI;
+
+impl<P: ThinParams> Metric<P> for NMI {
+    fn compute(
+        &mut self,
+        data: &EvaluationData,
+        params: &P,
+        metrics: &mut HashMap<String, f64>,
+    ) {
+        if data.labels.is_none() {
+            return;
+        }
+
+        let (_, labels) = SuperMixtureParams(params).predict(data.points.clone_owned());
+        let score = normalized_mutual_info_score(
+            data.labels.as_ref().unwrap().as_slice(),
+            labels.as_slice(),
+        );
+
+        metrics.insert("nmi".to_string(), score);
+    }
 }
 
 #[cfg(test)]
