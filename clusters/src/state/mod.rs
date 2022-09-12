@@ -3,15 +3,22 @@ mod local;
 mod local_sharded;
 
 pub use global::GlobalState;
-pub use local::LocalState;
+pub use local::{LocalState};
 pub use local_sharded::ShardedState;
 
 use rand::Rng;
-use crate::clusters::{ThinParams, ThinStats};
-use crate::options::ModelOptions;
+use crate::params::clusters::ThinStats;
+use crate::params::options::ModelOptions;
+use crate::params::thin::ThinParams;
 use crate::stats::NormalConjugatePrior;
 
 pub trait GlobalWorker<P: NormalConjugatePrior> {
+    // fn init<R: Rng + Clone + Send + Sync>(
+    //     &mut self,
+    //     data_stats: &P::SuffStats,
+    //     rng: &mut R,
+    // );
+
     fn n_clusters(&self) -> usize;
 
     fn n_points(&self) -> usize;
@@ -35,6 +42,8 @@ pub trait LocalWorker<P: NormalConjugatePrior> {
         n_clusters: usize,
         rng: &mut R,
     );
+
+    fn n_points(&self) -> usize;
 
     fn collect_data_stats(&self) -> P::SuffStats;
 

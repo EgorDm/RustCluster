@@ -13,12 +13,12 @@ use ndarray_npy::read_npy;
 use plotters::prelude::*;
 use rand::prelude::{SmallRng, StdRng};
 use rand::{Rng, SeedableRng};
-use clusters::clusters::SuperClusterParams;
 use clusters::metrics::normalized_mutual_info_score;
-use clusters::options::{FitOptions, ModelOptions};
+use clusters::params::options::{FitOptions, ModelOptions};
 use clusters::plotting::{axes_range_from_points, Cluster2D, init_axes2d};
 use clusters::stats::{NIW, NIWStats, SufficientStats};
 use rayon::prelude::*;
+use clusters::params::clusters::SuperClusterParams;
 use clusters::state::{GlobalState, LocalWorker, ShardedState};
 use clusters::state::GlobalWorker;
 

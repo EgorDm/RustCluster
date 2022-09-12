@@ -1,7 +1,8 @@
 use nalgebra::DMatrix;
 use rand::Rng;
 use rayon::prelude::*;
-use crate::clusters::{ThinParams, ThinStats};
+use crate::params::clusters::ThinStats;
+use crate::params::thin::ThinParams;
 use crate::state::{LocalState, LocalWorker};
 use crate::stats::NormalConjugatePrior;
 
@@ -39,12 +40,15 @@ impl<P: NormalConjugatePrior> LocalWorker<P> for ShardedState<P> {
         });
     }
 
+    fn n_points(&self) -> usize {
+        self.shards.iter().map(|shard| shard.n_points()).sum()
+    }
+
     fn collect_data_stats(&self) -> P::SuffStats {
         self.shards.par_iter().map(LocalWorker::<P>::collect_data_stats).sum()
     }
 
     fn collect_cluster_stats(&self, n_clusters: usize) -> ThinStats<P> {
-        // self.shards.par_iter()
         self.shards.iter()
             .map(|shard| shard.collect_cluster_stats(n_clusters))
             .sum()

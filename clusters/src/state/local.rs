@@ -9,12 +9,13 @@ use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
 use remoc::RemoteSend;
 use statrs::distribution::{Continuous};
-use crate::clusters::{SuperClusterStats, ThinParams, ThinStats};
-use crate::options::ModelOptions;
+use crate::params::options::ModelOptions;
 use crate::stats::{ContinuousBatchwise, FromData, NormalConjugatePrior, NIW, SufficientStats};
 use crate::utils::{col_normalize_log_weights, col_scatter, group_sort, replacement_sampling_weighted, row_normalize_log_weights};
 use crate::utils::Iterutils;
 use serde::{Serialize, Deserialize};
+use crate::params::clusters::{SuperClusterStats, ThinStats};
+use crate::params::thin::{AuxMixtureParams, hard_assignment, MixtureParams, soft_assignment, SuperMixtureParams, ThinParams};
 use crate::state::LocalWorker;
 use crate::stats::test_almost_mat;
 
@@ -46,61 +47,49 @@ impl<P: NormalConjugatePrior> LocalState<P> {
         self.data.ncols()
     }
 
-    pub fn apply_sample_labels_prim<S: LabelSamplingStrategy>(
+    pub fn apply_sample_labels_prim(
         &mut self,
         params: &impl ThinParams,
+        hard_assign: bool,
         rng: &mut impl Rng,
     ) {
         // Calculate log likelihood for each point
-        let mut ll = DMatrix::zeros(params.n_clusters(), self.n_points());
-        for prim in 0..params.n_clusters() {
-            ll.row_mut(prim).copy_from_slice(
-                params
-                    .cluster_dist(prim)
-                    .batchwise_ln_pdf(self.data.clone_owned())
-                    .as_slice()
-            );
-        }
-
-        let weights = params.cluster_weights();
-        for (prim, mut row) in ll.row_iter_mut().enumerate() {
-            let ln_weight = weights[prim].ln();
-            row.apply(|x| *x += ln_weight);
-        }
+        let ll = SuperMixtureParams(params).log_likelihood(self.data.clone_owned());
 
         // Sample labels
-        S::sample_label(ll, &mut self.labels, rng);
+        if hard_assign {
+            hard_assignment(ll, self.labels.as_mut_slice());
+        } else {
+            soft_assignment(ll, self.labels.as_mut_slice(), rng);
+        }
     }
 
-    pub fn apply_sample_labels_aux<S: LabelSamplingStrategy>(
+    pub fn apply_sample_labels_aux(
         &mut self,
         params: &impl ThinParams,
+        hard_assign: bool,
         rng: &mut impl Rng,
     ) {
         // Split data points into contiguous blocks (indexes only for now)
         let (indices, offsets) = self.sorted_indices(params.n_clusters());
 
-        // Sample pdf for each cluster and scatter them back in order to local.data
+        // Calculate log likelihood for each point given its cluster
+        // done by grouping the data points in blocks with the same label
         let mut ll = DMatrix::zeros(2, self.n_points());
         for prim in 0..params.n_clusters() {
             let indices = &indices[offsets[prim * 2]..offsets[(prim + 1) * 2]];
             let block = self.data.select_columns(indices);
-            let weights = params.cluster_aux_weights(prim);
 
-            for (aux, block) in repeat_n(block, 2).enumerate() {
-                let mut probs = params
-                    .cluster_aux_dist(prim, aux)
-                    .batchwise_ln_pdf(block.clone_owned())
-                    .reshape_generic(U1::from_usize(1), Dynamic::new(indices.len()));
-
-                let ln_weight = weights[aux].ln();
-                probs.apply(|x| *x += ln_weight);
-                col_scatter(&mut ll.row_mut(aux), indices, &probs);
-            }
+            let block_ll = AuxMixtureParams(params, prim).log_likelihood(block);
+            col_scatter(&mut ll, indices, &block_ll);
         }
 
         // Sample labels
-        S::sample_label(ll, &mut self.labels_aux, rng);
+        if hard_assign {
+            hard_assignment(ll, self.labels_aux.as_mut_slice());
+        } else {
+            soft_assignment(ll, self.labels_aux.as_mut_slice(), rng);
+        }
     }
 
     fn sorted_indices(&self, n_clusters: usize) -> (Vec<usize>, Vec<usize>) {
@@ -121,6 +110,10 @@ impl<P: NormalConjugatePrior> LocalWorker<P> for LocalState<P> {
     fn init<R: Rng + Clone + Send + Sync>(&mut self, n_clusters: usize, rng: &mut R) {
         self.labels.apply(|v| *v = rng.gen_range(0..n_clusters));
         self.labels_aux.apply(|v| *v = rng.gen_range(0..2));
+    }
+
+    fn n_points(&self) -> usize {
+        self.data.ncols()
     }
 
     fn collect_data_stats(&self) -> P::SuffStats {
@@ -153,15 +146,11 @@ impl<P: NormalConjugatePrior> LocalWorker<P> for LocalState<P> {
     fn apply_label_sampling<R: Rng + Clone + Send + Sync>(
         &mut self,
         params: &impl ThinParams,
-        hard_assignment: bool,
+        hard_assign: bool,
         rng: &mut R,
     ) {
-        if hard_assignment {
-            self.apply_sample_labels_prim::<HardAssignSampling>(params, rng);
-        } else {
-            self.apply_sample_labels_prim::<SoftAssignSampling>(params, rng);
-        }
-        self.apply_sample_labels_aux::<SoftAssignSampling>(params, rng);
+        self.apply_sample_labels_prim(params, hard_assign, rng);
+        self.apply_sample_labels_aux(params, false, rng);
     }
 
     fn apply_cluster_reset<R: Rng + Clone + Send + Sync>(
@@ -225,41 +214,6 @@ impl<P: NormalConjugatePrior> LocalWorker<P> for LocalState<P> {
     }
 }
 
-pub fn sample_weighted<R: Rng>(weights: &DMatrix<f64>, labels: &mut RowDVector<usize>, rng: &mut R) {
-    let labels = labels.as_mut_slice();
-    for (i, col) in weights.column_iter().enumerate() {
-        replacement_sampling_weighted(rng, col.into_iter().cloned(), &mut labels[i..=i]);
-    }
-}
-
-pub trait LabelSamplingStrategy {
-    fn sample_label<R: Rng>(ll: DMatrix<f64>, labels: &mut RowDVector<usize>, rng: &mut R);
-}
-
-pub struct HardAssignSampling;
-
-impl LabelSamplingStrategy for HardAssignSampling {
-    fn sample_label<R: Rng>(ll: DMatrix<f64>, labels: &mut RowDVector<usize>, _rng: &mut R) {
-        for (i, row) in ll.column_iter().enumerate() {
-            labels[i] = row.argmax().0;
-        }
-    }
-}
-
-pub struct SoftAssignSampling;
-
-impl LabelSamplingStrategy for SoftAssignSampling {
-    fn sample_label<R: Rng>(mut ll: DMatrix<f64>, labels: &mut RowDVector<usize>, rng: &mut R) {
-        col_normalize_log_weights(&mut ll);
-
-        let labels = labels.as_mut_slice();
-        for (i, col) in ll.column_iter().enumerate() {
-            replacement_sampling_weighted(rng, col.into_iter().cloned(), &mut labels[i..=i]);
-        }
-    }
-}
-
-
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
@@ -267,9 +221,9 @@ mod tests {
     use rand::prelude::StdRng;
     use rand::{Rng, SeedableRng};
     use statrs::distribution::MultivariateNormal;
-    use crate::clusters::{OwnedThinParams, SuperClusterStats, ThinParams};
+    use crate::params::clusters::SuperClusterStats;
+    use crate::params::thin::{OwnedThinParams, ThinParams};
     use crate::state::{LocalState, LocalWorker};
-    use crate::state::local::HardAssignSampling;
     use crate::stats::{FromData, NIW, NIWStats, SufficientStats};
     use crate::stats::tests::test_almost_mat;
 
@@ -342,7 +296,7 @@ mod tests {
         let labels_aux = RowDVector::zeros(120);
 
         let mut local = LocalState::<NIW>::new(data.clone(), labels, labels_aux);
-        local.apply_sample_labels_prim::<HardAssignSampling>(&params, &mut rng);
+        local.apply_sample_labels_prim(&params, true, &mut rng);
 
         for (i, point) in data.column_iter().enumerate() {
             assert_eq!(
@@ -404,7 +358,7 @@ mod tests {
         let labels_aux = RowDVector::zeros(120);
 
         let mut local = LocalState::<NIW>::new(data.clone(), labels.clone_owned(), labels_aux);
-        local.apply_sample_labels_aux::<HardAssignSampling>(&params, &mut rng);
+        local.apply_sample_labels_aux(&params, true, &mut rng);
 
         for (i, point) in data.column_iter().enumerate() {
             let label = labels[i];

@@ -64,26 +64,28 @@ pub fn unique_with_indices<T: Copy + Hash + Eq + Ord>(data: &[T], sorted: bool) 
 }
 
 pub fn row_normalize_log_weights(
-    weights: &mut DMatrix<f64>
-) {
+    mut weights: DMatrix<f64>
+) -> DMatrix<f64> {
     for mut row in weights.row_iter_mut() {
         let max = row.max();
         for x in row.iter_mut() {
             *x = (*x - max).exp();
         }
     }
+    weights
 }
 
 
 pub fn col_normalize_log_weights(
-    weights: &mut DMatrix<f64>
-) {
+    mut weights: DMatrix<f64>
+) -> DMatrix<f64> {
     for mut col in weights.column_iter_mut() {
         let max = col.max();
         for x in col.iter_mut() {
             *x = (*x - max).exp();
         }
     }
+    weights
 }
 
 pub fn col_broadcast_add<Real, R, C, SM, SV>(
@@ -225,7 +227,7 @@ mod tests {
             1.0, 2.0, 4.0,
         ]);
         weights.iter_mut().for_each(|x| *x = x.ln());
-        super::row_normalize_log_weights(&mut weights);
+        let weights = super::row_normalize_log_weights(weights);
         test_almost_mat(&weights, &DMatrix::from_row_slice(3, 3, &[
             0.25, 0.5, 1.0,
             0.25, 0.5, 1.0,
@@ -238,7 +240,7 @@ mod tests {
             1.0, 2.0, 4.0,
         ]);
         weights.iter_mut().for_each(|x| *x = x.ln());
-        super::col_normalize_log_weights(&mut weights);
+        let weights = super::col_normalize_log_weights(weights);
         test_almost_mat(&weights, &DMatrix::from_row_slice(3, 3, &[
             1.0, 1.0, 1.0,
             1.0, 1.0, 1.0,

@@ -4,13 +4,15 @@ use rand::Rng;
 use statrs::distribution::{Dirichlet, MultivariateNormal};
 use serde::{Serialize, Deserialize};
 use serde::de::DeserializeOwned;
-use crate::clusters::{ClusterParams, SuperClusterParams, ThinParams, ThinStats};
-use crate::options::{ModelOptions, OutlierRemoval};
+use crate::params::clusters::{ClusterParams, SuperClusterParams, ThinStats};
+use crate::params::options::{ModelOptions, OutlierRemoval};
+use crate::params::thin::ThinParams;
 use crate::stats::{NormalConjugatePrior, SplitMerge, stick_breaking_sample};
 use crate::state::GlobalWorker;
 use crate::utils::each_ref;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct GlobalState<P: NormalConjugatePrior> {
     pub clusters: Vec<SuperClusterParams<P>>,
     pub weights: Vec<f64>,
@@ -117,7 +119,7 @@ impl<P: NormalConjugatePrior> GlobalWorker<P> for GlobalState<P> {
         for (k, cluster) in self.clusters.iter().enumerate() {
             if cluster.n_points() > 0
                 || (options.outlier.is_some() && k == 0)
-                || (options.outlier.is_some() && k == 1 && self.n_clusters() == 2)
+                || (options.outlier.is_some() && k == 1 && GlobalWorker::n_clusters(self) == 2)
             {
                 new_clusters.push(cluster.clone());
             } else {
@@ -129,7 +131,7 @@ impl<P: NormalConjugatePrior> GlobalWorker<P> for GlobalState<P> {
     }
 
     fn check_and_split<R: Rng>(&mut self, options: &ModelOptions<P>, rng: &mut R) -> Vec<(usize, usize)> {
-        let mut decisions = vec![false; self.n_clusters()];
+        let mut decisions = vec![false; GlobalWorker::n_clusters(self)];
         for (k, cluster) in self.clusters.iter().enumerate() {
             if k == 0 && options.outlier.is_some() {
                 continue;
@@ -142,7 +144,7 @@ impl<P: NormalConjugatePrior> GlobalWorker<P> for GlobalState<P> {
 
         let mut split_idx = Vec::new();
         for (k, _) in decisions.into_iter().enumerate().filter(|(_, split)| *split) {
-            let new_idx = self.n_clusters();
+            let new_idx = GlobalWorker::n_clusters(self);
 
             // Split cluster parameters
             self.clusters.push(self.clusters[k].clone());
@@ -162,12 +164,12 @@ impl<P: NormalConjugatePrior> GlobalWorker<P> for GlobalState<P> {
 
     fn check_and_merge<R: Rng>(&mut self, options: &ModelOptions<P>, rng: &mut R) -> Vec<(usize, usize)> {
         let mut decisions = Vec::new();
-        for ki in 0..self.n_clusters() {
+        for ki in 0..GlobalWorker::n_clusters(self) {
             if ki == 0 && options.outlier.is_some() {
                 continue;
             }
 
-            for kj in ki + 1..self.n_clusters() {
+            for kj in ki + 1..GlobalWorker::n_clusters(self) {
                 let (cluster_i, cluster_j) = (&self.clusters[ki], &self.clusters[kj]);
 
                 if !cluster_i.splittable || !cluster_j.splittable
@@ -194,7 +196,7 @@ impl<P: NormalConjugatePrior> GlobalWorker<P> for GlobalState<P> {
     }
 }
 
-impl<P: NormalConjugatePrior + Serialize + DeserializeOwned> ThinParams for GlobalState<P> {
+impl<P: NormalConjugatePrior> ThinParams for GlobalState<P> {
     fn n_clusters(&self) -> usize {
         self.clusters.len()
     }

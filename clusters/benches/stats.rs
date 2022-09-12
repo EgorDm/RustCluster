@@ -1,8 +1,12 @@
 use criterion::{criterion_group, Criterion};
 use nalgebra::{DMatrix, DVector};
+use rand::prelude::StdRng;
+use rand::{Rng, SeedableRng};
+use rand::rngs::SmallRng;
 use clusters::stats::Covariance;
 use statrs::distribution::{Continuous, MultivariateNormal};
 use clusters::stats::ContinuousBatchwise;
+use statrs::statistics::Statistics;
 
 fn bench_covariance(c: &mut Criterion) {
     let a = DMatrix::<f64>::new_random(100, 100);
@@ -36,11 +40,22 @@ fn bench_mvn(c: &mut Criterion) {
         }
         res
     }));
+}
 
+fn bench_rng(c: &mut Criterion) {
+    c.bench_function("rng_StdRng", |bh| bh.iter(|| {
+        let mut rng = StdRng::seed_from_u64(24);
+        (0..1000).map(|_| rng.gen::<f64>()).sum::<f64>()
+    }));
+    c.bench_function("rng_SmallRng", |bh| bh.iter(|| {
+        let mut rng = SmallRng::seed_from_u64(24);
+        (0..1000).map(|_| rng.gen::<f64>()).sum::<f64>()
+    }));
 }
 
 criterion_group!(
     stats,
     bench_covariance,
     bench_mvn,
+    bench_rng,
 );

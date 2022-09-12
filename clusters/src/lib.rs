@@ -1,11 +1,12 @@
+extern crate core;
+
 pub mod utils;
-pub mod clusters;
 pub mod model;
-pub mod options;
 pub mod metrics;
 pub mod plotting;
 pub mod stats;
 pub mod state;
+pub mod params;
 
 #[cfg(test)]
 mod tests {

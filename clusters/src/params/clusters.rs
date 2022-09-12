@@ -3,15 +3,17 @@ use std::fmt::Debug;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign};
 use std::vec::IntoIter;
-use nalgebra::DVector;
+use itertools::repeat_n;
+use nalgebra::{DMatrix, DVector, RowDVector};
 use rand::distributions::Distribution;
 use rand::Rng;
 use statrs::distribution::{Dirichlet, MultivariateNormal};
-use crate::stats::{NormalConjugatePrior, SufficientStats};
+use crate::stats::{ContinuousBatchwise, NormalConjugatePrior, SufficientStats};
 use serde::{Serialize, Deserialize};
 use serde::de::DeserializeOwned;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct SuperClusterParams<P: NormalConjugatePrior> {
     pub prim: ClusterParams<P>,
     pub aux: [ClusterParams<P>; 2],
@@ -207,49 +209,6 @@ impl LLHistory {
     pub fn converged(&self, burnout_period: usize) -> bool {
         let ll_weighted = self.ll_weighted(burnout_period);
         ll_weighted.is_finite() && ll_weighted - self.ll_history[burnout_period] < 1e-2
-    }
-}
-
-
-pub trait ThinParams: Clone + Send + Sync + Serialize + DeserializeOwned {
-    fn n_clusters(&self) -> usize;
-
-    fn cluster_dist(&self, cluster_id: usize) -> &MultivariateNormal;
-
-    fn cluster_weights(&self) -> &[f64];
-
-    fn cluster_aux_dist(&self, cluster_id: usize, aux_id: usize) -> &MultivariateNormal;
-
-    fn cluster_aux_weights(&self, cluster_id: usize) -> &[f64; 2];
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct OwnedThinParams {
-    pub clusters: Vec<MultivariateNormal>,
-    pub cluster_weights: Vec<f64>,
-    pub clusters_aux: Vec<[MultivariateNormal; 2]>,
-    pub cluster_weights_aux: Vec<[f64; 2]>,
-}
-
-impl ThinParams for OwnedThinParams {
-    fn n_clusters(&self) -> usize {
-        self.clusters.len()
-    }
-
-    fn cluster_dist(&self, cluster_id: usize) -> &MultivariateNormal {
-        &self.clusters[cluster_id]
-    }
-
-    fn cluster_weights(&self) -> &[f64] {
-        &self.cluster_weights
-    }
-
-    fn cluster_aux_dist(&self, cluster_id: usize, aux_id: usize) -> &MultivariateNormal {
-        &self.clusters_aux[cluster_id][aux_id]
-    }
-
-    fn cluster_aux_weights(&self, cluster_id: usize) -> &[f64; 2] {
-        &self.cluster_weights_aux[cluster_id]
     }
 }
 

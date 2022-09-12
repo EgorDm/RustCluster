@@ -11,7 +11,7 @@ use tokio::{net::TcpListener, sync::RwLock, time::sleep};
 use clusters::executor::rtc::{Counter, IncreaseError, TCP_PORT, CounterServerSharedMut};
 use clusters::state::GlobalState;
 use clusters::local::{LocalActions, LocalState, ThinStats};
-use clusters::options::ModelOptions;
+use clusters::params::options::ModelOptions;
 use clusters::stats::{NIW, NIWStats};
 
 /// Server object for the counting service, keeping the state.

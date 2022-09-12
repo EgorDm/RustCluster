@@ -35,22 +35,28 @@ impl<P: NormalConjugatePrior> ModelOptions<P> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FitOptions {
     pub seed: u64,
+    pub reuse: bool,
     pub init_clusters: usize,
     pub max_clusters: usize,
     pub iters: usize,
     pub argmax_sample_stop: usize,
     pub iter_split_stop: usize,
+    pub verbose: bool,
+    pub workers: i32,
 }
 
 impl Default for FitOptions {
     fn default() -> Self {
         Self {
             seed: 42,
+            reuse: false,
             init_clusters: 1,
             max_clusters: usize::MAX,
             iters: 100,
             argmax_sample_stop: 5,
             iter_split_stop: 5,
+            verbose: true,
+            workers: 1,
         }
     }
 }

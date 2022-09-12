@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use rand::Rng;
 use statrs::function::gamma::ln_gamma;
-use crate::clusters::{ClusterParams, SuperClusterParams};
+use crate::params::clusters::{ClusterParams, SuperClusterParams};
 use crate::stats::NormalConjugatePrior;
 use crate::utils::each_ref;
 
@@ -79,7 +79,7 @@ mod tests {
     use statrs::assert_almost_eq;
     use statrs::distribution::MultivariateNormal;
     use statrs::prec::almost_eq;
-    use crate::clusters::ClusterParams;
+    use crate::params::clusters::ClusterParams;
     use crate::stats::{NIW, NIWParams, NIWStats, PriorHyperParams, SplitMerge};
     use crate::utils::each_ref;
 
