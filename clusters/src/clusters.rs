@@ -223,6 +223,36 @@ pub trait ThinParams: Clone + Send + Sync + Serialize + DeserializeOwned {
     fn cluster_aux_weights(&self, cluster_id: usize) -> &[f64; 2];
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OwnedThinParams {
+    pub clusters: Vec<MultivariateNormal>,
+    pub cluster_weights: Vec<f64>,
+    pub clusters_aux: Vec<[MultivariateNormal; 2]>,
+    pub cluster_weights_aux: Vec<[f64; 2]>,
+}
+
+impl ThinParams for OwnedThinParams {
+    fn n_clusters(&self) -> usize {
+        self.clusters.len()
+    }
+
+    fn cluster_dist(&self, cluster_id: usize) -> &MultivariateNormal {
+        &self.clusters[cluster_id]
+    }
+
+    fn cluster_weights(&self) -> &[f64] {
+        &self.cluster_weights
+    }
+
+    fn cluster_aux_dist(&self, cluster_id: usize, aux_id: usize) -> &MultivariateNormal {
+        &self.clusters_aux[cluster_id][aux_id]
+    }
+
+    fn cluster_aux_weights(&self, cluster_id: usize) -> &[f64; 2] {
+        &self.cluster_weights_aux[cluster_id]
+    }
+}
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThinStats<P: NormalConjugatePrior>(pub Vec<SuperClusterStats<P>>);

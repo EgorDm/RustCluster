@@ -46,36 +46,33 @@ impl<P: NormalConjugatePrior> LocalState<P> {
         self.data.ncols()
     }
 
-    pub fn apply_sample_labels_prim(
+    pub fn apply_sample_labels_prim<S: LabelSamplingStrategy>(
         &mut self,
         params: &impl ThinParams,
-        hard_assignment: bool,
         rng: &mut impl Rng,
     ) {
         // Calculate log likelihood for each point
-        let ln_weights = params.cluster_weights().iter().map(|w| w.ln()).collect::<Vec<_>>();
         let mut ll = DMatrix::zeros(params.n_clusters(), self.n_points());
-        for k in 0..params.n_clusters() {
-            ll.row_mut(k).copy_from_slice(
-                params.cluster_dist(k).batchwise_ln_pdf(self.data.clone_owned()).as_slice()
+        for prim in 0..params.n_clusters() {
+            ll.row_mut(prim).copy_from_slice(
+                params
+                    .cluster_dist(prim)
+                    .batchwise_ln_pdf(self.data.clone_owned())
+                    .as_slice()
             );
         }
-        for (k, mut row) in ll.row_iter_mut().enumerate() {
-            row.apply(|x| *x += ln_weights[k]);
+
+        let weights = params.cluster_weights();
+        for (prim, mut row) in ll.row_iter_mut().enumerate() {
+            let ln_weight = weights[prim].ln();
+            row.apply(|x| *x += ln_weight);
         }
 
         // Sample labels
-        if hard_assignment {
-            for (i, row) in ll.column_iter().enumerate() {
-                self.labels[i] = row.argmax().0;
-            }
-        } else {
-            col_normalize_log_weights(&mut ll);
-            sample_weighted(&ll, &mut self.labels, rng);
-        }
+        S::sample_label(ll, &mut self.labels, rng);
     }
 
-    pub fn apply_sample_labels_aux(
+    pub fn apply_sample_labels_aux<S: LabelSamplingStrategy>(
         &mut self,
         params: &impl ThinParams,
         rng: &mut impl Rng,
@@ -95,14 +92,15 @@ impl<P: NormalConjugatePrior> LocalState<P> {
                     .cluster_aux_dist(prim, aux)
                     .batchwise_ln_pdf(block.clone_owned())
                     .reshape_generic(U1::from_usize(1), Dynamic::new(indices.len()));
-                probs.apply(|x| *x += weights[aux].ln());
+
+                let ln_weight = weights[aux].ln();
+                probs.apply(|x| *x += ln_weight);
                 col_scatter(&mut ll.row_mut(aux), indices, &probs);
             }
         }
 
         // Sample labels
-        col_normalize_log_weights(&mut ll);
-        sample_weighted(&ll, &mut self.labels_aux, rng);
+        S::sample_label(ll, &mut self.labels_aux, rng);
     }
 
     fn sorted_indices(&self, n_clusters: usize) -> (Vec<usize>, Vec<usize>) {
@@ -158,8 +156,12 @@ impl<P: NormalConjugatePrior> LocalWorker<P> for LocalState<P> {
         hard_assignment: bool,
         rng: &mut R,
     ) {
-        self.apply_sample_labels_prim(params, hard_assignment, rng);
-        self.apply_sample_labels_aux(params, rng);
+        if hard_assignment {
+            self.apply_sample_labels_prim::<HardAssignSampling>(params, rng);
+        } else {
+            self.apply_sample_labels_prim::<SoftAssignSampling>(params, rng);
+        }
+        self.apply_sample_labels_aux::<SoftAssignSampling>(params, rng);
     }
 
     fn apply_cluster_reset<R: Rng + Clone + Send + Sync>(
@@ -230,6 +232,33 @@ pub fn sample_weighted<R: Rng>(weights: &DMatrix<f64>, labels: &mut RowDVector<u
     }
 }
 
+pub trait LabelSamplingStrategy {
+    fn sample_label<R: Rng>(ll: DMatrix<f64>, labels: &mut RowDVector<usize>, rng: &mut R);
+}
+
+pub struct HardAssignSampling;
+
+impl LabelSamplingStrategy for HardAssignSampling {
+    fn sample_label<R: Rng>(ll: DMatrix<f64>, labels: &mut RowDVector<usize>, _rng: &mut R) {
+        for (i, row) in ll.column_iter().enumerate() {
+            labels[i] = row.argmax().0;
+        }
+    }
+}
+
+pub struct SoftAssignSampling;
+
+impl LabelSamplingStrategy for SoftAssignSampling {
+    fn sample_label<R: Rng>(mut ll: DMatrix<f64>, labels: &mut RowDVector<usize>, rng: &mut R) {
+        col_normalize_log_weights(&mut ll);
+
+        let labels = labels.as_mut_slice();
+        for (i, col) in ll.column_iter().enumerate() {
+            replacement_sampling_weighted(rng, col.into_iter().cloned(), &mut labels[i..=i]);
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -237,8 +266,10 @@ mod tests {
     use nalgebra::{DMatrix, DVector, RowDVector};
     use rand::prelude::StdRng;
     use rand::{Rng, SeedableRng};
-    use crate::clusters::SuperClusterStats;
+    use statrs::distribution::MultivariateNormal;
+    use crate::clusters::{OwnedThinParams, SuperClusterStats, ThinParams};
     use crate::state::{LocalState, LocalWorker};
+    use crate::state::local::HardAssignSampling;
     use crate::stats::{FromData, NIW, NIWStats, SufficientStats};
     use crate::stats::tests::test_almost_mat;
 
@@ -287,17 +318,106 @@ mod tests {
         }
     }
 
-    //
-    // #[test]
-    // fn test_sample_labels() {
-    //     todo!()
-    // }
-    //
+    #[test]
+    fn test_sample_labels() {
+        let mut rng = StdRng::seed_from_u64(42);
+        let params = OwnedThinParams {
+            clusters: vec![
+                MultivariateNormal::new(
+                    DVector::from_vec(vec![0.0, 0.0]),
+                    DMatrix::from_diagonal_element(2, 2, 1.0),
+                ).unwrap(),
+                MultivariateNormal::new(
+                    DVector::from_vec(vec![1.0, 1.0]),
+                    DMatrix::from_diagonal_element(2, 2, 1.0),
+                ).unwrap(),
+            ],
+            cluster_weights: vec![0.5, 0.5],
+            clusters_aux: vec![],
+            cluster_weights_aux: vec![],
+        };
+
+        let data = DMatrix::from_fn(2, 120, |_, _| rng.gen_range(0.0..1.0));
+        let labels = RowDVector::zeros(120);
+        let labels_aux = RowDVector::zeros(120);
+
+        let mut local = LocalState::<NIW>::new(data.clone(), labels, labels_aux);
+        local.apply_sample_labels_prim::<HardAssignSampling>(&params, &mut rng);
+
+        for (i, point) in data.column_iter().enumerate() {
+            assert_eq!(
+                local.labels[i],
+                if (point - DVector::from_vec(vec![0.0, 0.0])).norm() < (point - DVector::from_vec(vec![1.0, 1.0])).norm() {
+                    0
+                } else {
+                    1
+                }
+            );
+        }
+    }
+
     #[test]
     fn test_sample_labels_aux() {
+        let mut rng = StdRng::seed_from_u64(42);
+        let params = OwnedThinParams {
+            clusters: vec![
+                MultivariateNormal::new(
+                    DVector::from_vec(vec![0.0, 0.0]),
+                    DMatrix::from_diagonal_element(2, 2, 1.0),
+                ).unwrap(),
+                MultivariateNormal::new(
+                    DVector::from_vec(vec![1.0, 1.0]),
+                    DMatrix::from_diagonal_element(2, 2, 1.0),
+                ).unwrap(),
+            ],
+            cluster_weights: vec![0.5, 0.5],
+            clusters_aux: vec![
+                [
+                    MultivariateNormal::new(
+                        DVector::from_vec(vec![0.0, 0.0]),
+                        DMatrix::from_diagonal_element(2, 2, 1.0),
+                    ).unwrap(),
+                    MultivariateNormal::new(
+                        DVector::from_vec(vec![1.0, 1.0]),
+                        DMatrix::from_diagonal_element(2, 2, 1.0),
+                    ).unwrap(),
+                ],
+                [
+                    MultivariateNormal::new(
+                        DVector::from_vec(vec![0.0, 4.0]),
+                        DMatrix::from_diagonal_element(2, 2, 1.0),
+                    ).unwrap(),
+                    MultivariateNormal::new(
+                        DVector::from_vec(vec![4.0, 0.0]),
+                        DMatrix::from_diagonal_element(2, 2, 1.0),
+                    ).unwrap(),
+                ],
+            ],
+            cluster_weights_aux: vec![
+                [0.5, 0.5],
+                [0.5, 0.5],
+            ],
+        };
 
+        let data = DMatrix::from_fn(2, 120, |_, _| rng.gen_range(0.0..1.0));
+        let labels = RowDVector::from_fn(120, |_, _| rng.gen_range(0..2));
+        let labels_aux = RowDVector::zeros(120);
 
+        let mut local = LocalState::<NIW>::new(data.clone(), labels.clone_owned(), labels_aux);
+        local.apply_sample_labels_aux::<HardAssignSampling>(&params, &mut rng);
 
-        todo!()
+        for (i, point) in data.column_iter().enumerate() {
+            let label = labels[i];
+
+            assert_eq!(
+                local.labels_aux[i],
+                if (point - params.cluster_aux_dist(label, 0).mu()).norm()
+                    < (point - params.cluster_aux_dist(label, 1).mu()).norm() {
+                    0
+                } else {
+                    1
+                }
+            );
+        }
     }
 }
