@@ -1,6 +1,7 @@
 use nalgebra::{DefaultAllocator, Dim, Matrix, OMatrix, RawStorage, RawStorageMut, Scalar, Storage, U1};
 use nalgebra::allocator::Allocator;
 use simba::scalar::{Field, SupersetOf};
+use statrs::assert_almost_eq;
 
 pub trait Covariance<T, R: Dim, C: Dim> {
     fn row_cov(&self) -> OMatrix<T, C, C>
@@ -75,6 +76,24 @@ impl<
     }
 }
 
+pub fn test_almost_mat<R1: Dim, C1: Dim, R2: Dim, C2: Dim>(
+    value: &OMatrix<f64, R1, C1>,
+    expected: &OMatrix<f64, R2, C2>,
+    acc: f64,
+)
+    where DefaultAllocator: nalgebra::allocator::Allocator<f64, R1, C1>,
+          DefaultAllocator: nalgebra::allocator::Allocator<f64, R2, C2> {
+
+    assert_eq!(value.nrows(), expected.nrows());
+    assert_eq!(value.ncols(), expected.ncols());
+    for i in 0..value.nrows() {
+        for j in 0..value.ncols() {
+            assert_almost_eq!(expected[(i, j)], value[(i, j)], acc);
+        }
+    }
+}
+
+
 #[cfg(test)]
 pub mod tests {
     use nalgebra::{DefaultAllocator, Dim, DMatrix, OMatrix};
@@ -88,6 +107,9 @@ pub mod tests {
     )
         where DefaultAllocator: nalgebra::allocator::Allocator<f64, R1, C1>,
               DefaultAllocator: nalgebra::allocator::Allocator<f64, R2, C2> {
+
+        assert_eq!(value.nrows(), expected.nrows());
+        assert_eq!(value.ncols(), expected.ncols());
         for i in 0..value.nrows() {
             for j in 0..value.ncols() {
                 assert_almost_eq!(expected[(i, j)], value[(i, j)], acc);

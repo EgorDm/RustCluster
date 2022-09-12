@@ -1,9 +1,10 @@
 use std::iter::Sum;
-use itertools::{Itertools, izip};
+use itertools::{Itertools, izip, repeat_n};
 use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Range};
 use std::vec::IntoIter;
-use nalgebra::{Dim, DMatrix, DVector, Dynamic, Matrix, RowDVector, RowVector, Storage};
+use nalgebra::{Dim, DMatrix, DVector, Dynamic, Matrix, RowDVector, RowVector, Storage, U1};
+use num_traits::real::Real;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
 use remoc::RemoteSend;
@@ -15,6 +16,7 @@ use crate::utils::{col_normalize_log_weights, col_scatter, group_sort, replaceme
 use crate::utils::Iterutils;
 use serde::{Serialize, Deserialize};
 use crate::state::LocalWorker;
+use crate::stats::test_almost_mat;
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -81,15 +83,21 @@ impl<P: NormalConjugatePrior> LocalState<P> {
         // Split data points into contiguous blocks (indexes only for now)
         let (indices, offsets) = self.sorted_indices(params.n_clusters());
 
-        // Sample pdf for each block and scatter them back in order to local.data
+        // Sample pdf for each cluster and scatter them back in order to local.data
         let mut ll = DMatrix::zeros(2, self.n_points());
-        for block_id in 0..offsets.len() - 1 {
-            let indices = &indices[offsets[block_id]..offsets[block_id + 1]];
+        for prim in 0..params.n_clusters() {
+            let indices = &indices[offsets[prim * 2]..offsets[(prim + 1) * 2]];
             let block = self.data.select_columns(indices);
+            let weights = params.cluster_aux_weights(prim);
 
-            let (prim, aux) = (block_id / 2, block_id % 2);
-            let probs = params.cluster_aux_dist(prim, aux).batchwise_ln_pdf(block).transpose();
-            col_scatter(&mut ll.row_mut(aux), indices, &probs);
+            for (aux, block) in repeat_n(block, 2).enumerate() {
+                let mut probs = params
+                    .cluster_aux_dist(prim, aux)
+                    .batchwise_ln_pdf(block.clone_owned())
+                    .reshape_generic(U1::from_usize(1), Dynamic::new(indices.len()));
+                probs.apply(|x| *x += weights[aux].ln());
+                col_scatter(&mut ll.row_mut(aux), indices, &probs);
+            }
         }
 
         // Sample labels
@@ -225,11 +233,12 @@ pub fn sample_weighted<R: Rng>(weights: &DMatrix<f64>, labels: &mut RowDVector<u
 
 #[cfg(test)]
 mod tests {
+    use itertools::Itertools;
     use nalgebra::{DMatrix, DVector, RowDVector};
     use rand::prelude::StdRng;
     use rand::{Rng, SeedableRng};
     use crate::clusters::SuperClusterStats;
-    use crate::state::LocalWorker;
+    use crate::state::{LocalState, LocalWorker};
     use crate::stats::{FromData, NIW, NIWStats, SufficientStats};
     use crate::stats::tests::test_almost_mat;
 
@@ -261,24 +270,34 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn test_sorted_indices() {
-    //     let data = DMatrix::from_fn(2, 120, |_, _| rng.gen_range(0.0..1.0));
-    //     let labels = RowDVector::from_fn(120, |_, i| i / 30);
-    //     let labels_aux = RowDVector::from_fn(120, |_, i| i / 15 % 2);
-    //
-    //     let local = super::LocalState::new(data.clone(), labels, labels_aux);
-    //
-    //     todo!()
-    // }
+    #[test]
+    fn test_sorted_indices() {
+        let mut rng = StdRng::seed_from_u64(42);
+        let data = DMatrix::from_fn(2, 120, |_, _| rng.gen_range(0.0..1.0));
+        let labels = RowDVector::from_fn(120, |_, i| (i % 8) / 2);
+        let labels_aux = RowDVector::from_fn(120, |_, i| i % 2);
+
+        let local = LocalState::<NIW>::new(data.clone(), labels.clone_owned(), labels_aux.clone_owned());
+
+        let (indices, offsets) = local.sorted_indices(4);
+        assert_eq!(offsets, vec![0, 15, 30, 45, 60, 75, 90, 105, 120]);
+        for (i, &index) in indices.iter().enumerate() {
+            assert_eq!(labels[index], i / 30);
+            assert_eq!(labels_aux[index], (i / 15) % 2);
+        }
+    }
+
     //
     // #[test]
     // fn test_sample_labels() {
     //     todo!()
     // }
     //
-    // #[test]
-    // fn test_sample_labels_aux() {
-    //     todo!()
-    // }
+    #[test]
+    fn test_sample_labels_aux() {
+
+
+
+        todo!()
+    }
 }

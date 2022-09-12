@@ -74,9 +74,55 @@ impl<P: NormalConjugatePrior> SplitMerge<P> {
 
 
 #[cfg(test)]
-mod test {
+mod tests {
+    use nalgebra::{DMatrix, DVector};
+    use statrs::assert_almost_eq;
+    use statrs::distribution::MultivariateNormal;
+    use statrs::prec::almost_eq;
+    use crate::clusters::ClusterParams;
+    use crate::stats::{NIW, NIWParams, NIWStats, PriorHyperParams, SplitMerge};
+    use crate::utils::each_ref;
+
     #[test]
     fn test_compute_log_h_split() {
-        todo!()
+        let prim_params = ClusterParams::<NIW>::new(
+            NIWParams::default(2),
+            NIWParams::default(2),
+            NIWStats {
+                n_points: 10000,
+                mean_sum: DVector::from_vec(vec![53421.49186074734, 766.8183973431587]),
+                cov_sum: DMatrix::from_vec(2, 2, vec![445925.3699037639, 19567.09899818292, 19567.09899818292, 1146748.4105307986]),
+            },
+            MultivariateNormal::new(DVector::zeros(2), DMatrix::identity(2, 2)).unwrap()
+        );
+
+        let aux_params = [
+            ClusterParams::<NIW>::new(
+                NIWParams::default(2),
+                NIWParams::default(2),
+                NIWStats {
+                    n_points: 3095,
+                    mean_sum: DVector::from_vec(vec![-953.5522114038467, -7957.599519848824]),
+                    cov_sum: DMatrix::from_vec(2, 2, vec![2135.7392811890277, 1127.9554153340587, 1127.9554153340587, 27002.447292295525]),
+                },
+                MultivariateNormal::new(DVector::zeros(2), DMatrix::identity(2, 2)).unwrap()
+            ),
+            ClusterParams::<NIW>::new(
+                NIWParams::default(2),
+                NIWParams::default(2),
+                NIWStats {
+                    n_points: 6905,
+                    mean_sum: DVector::from_vec(vec![54375.044072151184, 8724.417917191982]),
+                    cov_sum: DMatrix::from_vec(2, 2, vec![443789.63062257477, 18439.143582848767, 18439.143582848767, 1119745.9632385024]),
+                },
+                MultivariateNormal::new(DVector::zeros(2), DMatrix::identity(2, 2)).unwrap()
+            )
+        ];
+
+        assert_almost_eq!(
+            SplitMerge::compute_log_h_split(&prim_params, each_ref(&aux_params), 100.0),
+            11450.182622567772,
+            1e-6
+        )
     }
 }
