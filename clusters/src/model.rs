@@ -1,16 +1,11 @@
-use std::collections::HashMap;
 use std::thread::available_parallelism;
-use std::time::{Duration, Instant};
-use itertools::Itertools;
 use nalgebra::{DMatrix, RowDVector};
 use rand::prelude::*;
-use crate::callback::{Callback, EvalData};
-use crate::metrics::Metric;
+use crate::callback::{Callback};
 use crate::params::options::{FitOptions, ModelOptions};
-use crate::params::thin::{MixtureParams, SuperMixtureParams, ThinParams};
+use crate::params::thin::{MixtureParams, SuperMixtureParams};
 use crate::state::{GlobalState, GlobalWorker, LocalState, LocalWorker, ShardedState};
 use crate::stats::NormalConjugatePrior;
-use crate::utils::{reservoir_sampling, reservoir_sampling_weighted};
 
 pub struct Model<
     P: NormalConjugatePrior,
@@ -43,7 +38,7 @@ impl<P: NormalConjugatePrior> Model<P> {
         &mut self,
         data: DMatrix<f64>,
         fit_options: &FitOptions,
-        mut callback: Option<impl Callback<GlobalState<P>>>,
+        callback: Option<impl Callback<GlobalState<P>>>,
     ) {
         let mut rng = SmallRng::seed_from_u64(fit_options.seed);
         match fit_options.workers {
@@ -123,7 +118,7 @@ impl<P: NormalConjugatePrior> Model<P> {
                     let split_idx = global.check_and_split(&self.model_options, &mut rng);
                     local.apply_split(&split_idx, &mut rng);
 
-                    if split_idx.len() > 0 {
+                    if !split_idx.is_empty() {
                         let stats = local.collect_cluster_stats(GlobalWorker::n_clusters(global));
                         global.update_clusters_post( stats);
                     }

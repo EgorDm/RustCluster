@@ -32,7 +32,7 @@ impl<P: NormalConjugatePrior> ModelOptions<P> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct FitOptions {
     pub seed: u64,
     pub reuse: bool,

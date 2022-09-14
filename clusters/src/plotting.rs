@@ -1,13 +1,11 @@
-use std::borrow::Borrow;
 use std::f64::consts::PI;
 use std::marker::PhantomData;
 use std::ops::{Index, Range};
-use nalgebra::{DVector, Dynamic, Matrix, Storage};
+use nalgebra::{Dynamic, Matrix, Storage};
 use plotters::coord::Shift;
 use plotters::coord::types::RangedCoordf64;
-use plotters::element::{CoordMapper, Drawable, PointCollection};
+use plotters::element::{Drawable, PointCollection};
 use plotters::prelude::*;
-use plotters::style::SizeDesc;
 use plotters_backend::{BackendCoord, DrawingErrorKind};
 
 pub type PointF = (f64, f64);
@@ -44,7 +42,7 @@ impl<'a> PointCollection<'a, PointF> for &'a Ellipse {
 impl<DB: DrawingBackend> Drawable<DB> for Ellipse {
     fn draw<I: Iterator<Item=BackendCoord>>(
         &self,
-        mut points: I,
+        points: I,
         backend: &mut DB,
         _: (u32, u32),
     ) -> Result<(), DrawingErrorKind<DB::ErrorType>> {
@@ -94,7 +92,7 @@ impl<DB: DrawingBackend> IntoIterator for Cluster2D<DB> {
 
     fn into_iter(self) -> Self::IntoIter {
         [
-            Circle::new(self.mu.clone(), 8, self.center_style).into_dyn(),
+            Circle::new(self.mu, 8, self.center_style).into_dyn(),
             Ellipse::new(self.mu, self.cov, self.contour_style, self.accuracy).into_dyn(),
         ].into_iter()
     }

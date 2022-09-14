@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use nalgebra::DMatrix;
 use rand::Rng;
 use rayon::prelude::*;
@@ -50,7 +49,7 @@ impl<P: NormalConjugatePrior> LocalWorker<P> for ShardedState<P> {
     }
 
     fn collect_cluster_stats(&self, n_clusters: usize) -> Vec<SuperClusterStats<P>> {
-        let mut full: Vec<_> = self.shards.par_iter()
+        let full: Vec<_> = self.shards.par_iter()
             .map(|shard| shard.collect_cluster_stats(n_clusters))
             .collect();
         let mut iter = full.into_iter();
@@ -70,7 +69,7 @@ impl<P: NormalConjugatePrior> LocalWorker<P> for ShardedState<P> {
         hard_assignment: bool,
         rng: &mut R,
     ) {
-        self.shards.par_iter_mut().for_each_with(rng.clone(), |mut rng, shard| {
+        self.shards.par_iter_mut().for_each_with(rng.clone(), |rng, shard| {
             shard.apply_label_sampling(params, hard_assignment, rng);
         });
     }
@@ -80,7 +79,7 @@ impl<P: NormalConjugatePrior> LocalWorker<P> for ShardedState<P> {
         cluster_ids: &[usize],
         rng: &mut R,
     ) {
-        self.shards.par_iter_mut().for_each_with(rng.clone(), |mut rng, shard| {
+        self.shards.par_iter_mut().for_each_with(rng.clone(), |rng, shard| {
             shard.apply_cluster_reset(cluster_ids, rng);
         });
     }
@@ -99,7 +98,7 @@ impl<P: NormalConjugatePrior> LocalWorker<P> for ShardedState<P> {
         split_decisions: &[(usize, usize)],
         rng: &mut R,
     ) {
-        self.shards.par_iter_mut().for_each_with(rng.clone(), |mut rng, shard| {
+        self.shards.par_iter_mut().for_each_with(rng.clone(), |rng, shard| {
             shard.apply_split(split_decisions, rng);
         });
     }

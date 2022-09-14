@@ -8,11 +8,11 @@ use crate::params::thin::ThinParams;
 use crate::utils::reservoir_sampling;
 
 pub trait Callback<P: ThinParams> {
-    fn before_step(&mut self, i: usize) {}
+    fn before_step(&mut self, _i: usize) {}
 
-    fn during_step(&mut self, i: usize, params: &P) {}
+    fn during_step(&mut self, _i: usize, _params: &P) {}
 
-    fn after_step(&mut self, i: usize) {}
+    fn after_step(&mut self, _i: usize) {}
 }
 
 pub struct EvalData {

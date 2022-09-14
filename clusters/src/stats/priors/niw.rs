@@ -147,8 +147,8 @@ impl ConjugatePrior for NIW {
     }
 
     fn posterior_predictive<S: Storage<f64, Dynamic, Dynamic>>(
-        post: &Self::HyperParams,
-        data: &Matrix<f64, Dynamic, Dynamic, S>,
+        _post: &Self::HyperParams,
+        _data: &Matrix<f64, Dynamic, Dynamic, S>,
     ) -> f64 {
         todo!()
     }

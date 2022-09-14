@@ -62,7 +62,7 @@ pub fn replacement_sampling_weighted<
     I: Iterator<Item=W>
 >(
     rng: &mut impl Rng,
-    mut src: I,
+    src: I,
     dst: &mut [usize]
 ) {
     let dist = WeightedIndex::new(src).unwrap();

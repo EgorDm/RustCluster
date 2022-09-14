@@ -1,15 +1,11 @@
-use nalgebra::{DVector};
-use rand::distributions::{Distribution};
 use rand::Rng;
-use statrs::distribution::{Dirichlet, MultivariateNormal};
+use statrs::distribution::MultivariateNormal;
 use serde::{Serialize, Deserialize};
-use serde::de::DeserializeOwned;
 use crate::params::clusters::{ClusterParams, SuperClusterParams, SuperClusterStats};
 use crate::params::options::{ModelOptions, OutlierRemoval};
 use crate::params::thin::ThinParams;
 use crate::stats::{NormalConjugatePrior, SplitMerge, stick_breaking_sample};
 use crate::state::GlobalWorker;
-use crate::utils::each_ref;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(bound = "")]

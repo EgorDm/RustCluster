@@ -1,23 +1,13 @@
-use std::iter::Sum;
-use itertools::{Itertools, izip, repeat_n};
+use itertools::izip;
 use std::marker::PhantomData;
-use std::ops::{Add, AddAssign, Range};
-use std::vec::IntoIter;
-use nalgebra::{Dim, DMatrix, DVector, Dynamic, Matrix, RowDVector, RowVector, Storage, U1};
-use num_traits::real::Real;
-use rand::distributions::{Distribution, WeightedIndex};
+use nalgebra::{DMatrix, RowDVector};
 use rand::Rng;
-use remoc::RemoteSend;
-use statrs::distribution::{Continuous};
-use crate::params::options::ModelOptions;
-use crate::stats::{ContinuousBatchwise, FromData, NormalConjugatePrior, NIW, SufficientStats};
-use crate::utils::{col_normalize_log_weights, col_scatter, group_sort, replacement_sampling_weighted, row_normalize_log_weights};
+use crate::stats::{FromData, NormalConjugatePrior};
+use crate::utils::{col_scatter, group_sort};
 use crate::utils::Iterutils;
-use serde::{Serialize, Deserialize};
 use crate::params::clusters::{SuperClusterStats};
 use crate::params::thin::{AuxMixtureParams, hard_assignment, MixtureParams, soft_assignment, SuperMixtureParams, ThinParams};
 use crate::state::LocalWorker;
-use crate::stats::test_almost_mat;
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -171,14 +161,12 @@ impl<P: NormalConjugatePrior> LocalWorker<P> for LocalState<P> {
         &mut self,
         cluster_ids: &[usize],
     ) {
-        let mut removed = 0;
-        for &k in cluster_ids {
+        for (removed, &k) in cluster_ids.iter().enumerate() {
             for l in self.labels.iter_mut() {
                 if *l > k - removed {
                     *l -= 1;
                 }
             }
-            removed += 1;
         }
     }
 

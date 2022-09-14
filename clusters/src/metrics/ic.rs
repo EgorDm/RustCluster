@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use itertools::izip;
 use nalgebra::RowDVector;
 use statrs::statistics::Statistics;
 use crate::metrics::{EvalData, Metric};
@@ -40,6 +39,27 @@ impl<P: ThinParams> Metric<P> for AIC {
         let score = aic(data.points.nrows(), params.n_params(), avg_log_likelihood);
 
         metrics.insert("aic".to_string(), score);
+    }
+}
+
+pub struct BIC;
+
+impl<P: ThinParams> Metric<P> for BIC {
+    fn compute(
+        &mut self,
+        _i: usize,
+        data: &EvalData,
+        params: &P,
+        metrics: &mut HashMap<String, f64>
+    ) {
+        let log_likelihood = SuperMixtureParams(params).log_likelihood(data.points.clone_owned());
+        let mut labels = RowDVector::zeros(data.points.ncols());
+        hard_assignment(&log_likelihood, labels.as_mut_slice());
+
+        let avg_log_likelihood = log_likelihood.column_iter().map(|col| col.max()).mean();
+        let score = bic(data.points.nrows(), params.n_params(), avg_log_likelihood);
+
+        metrics.insert("bic".to_string(), score);
     }
 }
 

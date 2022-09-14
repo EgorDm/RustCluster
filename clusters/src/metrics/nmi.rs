@@ -3,9 +3,6 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 use itertools::Itertools;
-use num_traits::{FromPrimitive, PrimInt};
-use num_traits::real::Real;
-use simba::scalar::SupersetOf;
 use crate::metrics::{EvalData, Metric};
 use crate::params::thin::{MixtureParams, SuperMixtureParams, ThinParams};
 use crate::utils::{unique_with_indices};

@@ -116,7 +116,7 @@ pub trait MixtureParams {
 
     fn predict(&self, data: DMatrix<f64>) -> (DMatrix<f64>, RowDVector<usize>) {
         let mut labels = RowDVector::zeros(data.ncols());
-        let mut log_likelihood = self.log_likelihood(data);
+        let log_likelihood = self.log_likelihood(data);
         hard_assignment(&log_likelihood, labels.as_mut_slice());
         let probs = col_normalize_log_weights(log_likelihood);
 
@@ -135,7 +135,7 @@ pub fn hard_assignment(
 }
 
 pub fn soft_assignment(
-    mut log_likelihood: DMatrix<f64>,
+    log_likelihood: DMatrix<f64>,
     labels: &mut [usize],
     rng: &mut impl Rng,
 ) {

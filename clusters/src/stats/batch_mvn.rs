@@ -1,10 +1,7 @@
-use std::ops::{AddAssign, MulAssign};
-use nalgebra::{DefaultAllocator, Dim, DMatrix, DVector, Dynamic, Matrix, Storage, StorageMut};
+use nalgebra::{DefaultAllocator, DVector, Dynamic, Matrix, StorageMut};
 use nalgebra::allocator::Allocator;
 use statrs::distribution::MultivariateNormal;
-use statrs::statistics::MeanN;
-use crate::utils::{col_broadcast_add, col_broadcast_sub};
-use serde::{Serialize, Deserialize};
+use crate::utils::{col_broadcast_sub};
 
 pub trait ContinuousBatchwise<K> {
     fn batchwise_pdf(
@@ -31,7 +28,7 @@ where
         let mut left = self.precision() * &dvs;
         left.component_mul_assign(&dvs);
 
-        let mut exp_term = DVector::from_iterator(
+        let exp_term = DVector::from_iterator(
             n_points,
             left.column_iter().map(|col| (-0.5 * col.sum()).exp() )
         );
@@ -46,7 +43,7 @@ where
         left.component_mul_assign(&dvs);
 
         let pdf_const = self.pdf_const().ln();
-        let mut exp_term = DVector::from_iterator(
+        let exp_term = DVector::from_iterator(
             n_points,
             left.column_iter().map(|col| -0.5 * col.sum() + pdf_const)
         );

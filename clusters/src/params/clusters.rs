@@ -2,15 +2,12 @@ use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign};
-use std::vec::IntoIter;
-use itertools::repeat_n;
-use nalgebra::{DMatrix, DVector, RowDVector};
+use nalgebra::{DVector};
 use rand::distributions::Distribution;
 use rand::Rng;
 use statrs::distribution::{Dirichlet, MultivariateNormal};
-use crate::stats::{ContinuousBatchwise, NormalConjugatePrior, SufficientStats};
+use crate::stats::{NormalConjugatePrior, SufficientStats};
 use serde::{Serialize, Deserialize};
-use serde::de::DeserializeOwned;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(bound = "")]
@@ -200,7 +197,7 @@ impl LLHistory {
 
     pub fn ll_weighted(&self, burnout_period: usize) -> f64 {
         if self.ll_history.len() <= burnout_period {
-            return f64::INFINITY;
+            f64::INFINITY
         } else {
             self.ll_history.iter().take(burnout_period).sum::<f64>() / (burnout_period as f64 - 0.1)
         }

@@ -1,12 +1,8 @@
-use std::collections::hash_map::Entry;
 use std::mem::MaybeUninit;
-use nalgebra::{DefaultAllocator, Dim, DMatrix, Dynamic, Matrix, OMatrix, OVector, Scalar, Storage, StorageMut, U1, Vector};
+use nalgebra::{DefaultAllocator, Dim, DMatrix, Matrix, Scalar, Storage, StorageMut, U1};
 use std::collections::HashMap;
-use num_traits::{FromPrimitive, One, PrimInt};
 use std::hash::Hash;
-use itertools::{Itertools, izip};
 use nalgebra::allocator::Allocator;
-use nalgebra::constraint::{SameNumberOfRows, ShapeConstraint};
 use simba::scalar::RealField;
 
 pub trait Iterutils : Iterator {
@@ -89,7 +85,7 @@ pub fn col_normalize_log_weights(
 }
 
 pub fn col_broadcast_add<Real, R, C, SM, SV>(
-    mut arr: Matrix<Real, R, C, SM>,
+    arr: Matrix<Real, R, C, SM>,
     vec: &Matrix<Real, C, U1, SV>,
 ) -> Matrix<Real, R, C, SM>
     where
@@ -103,7 +99,7 @@ pub fn col_broadcast_add<Real, R, C, SM, SV>(
 {
     assert_eq!(arr.nrows(), vec.len());
 
-    let mut nrows = arr.nrows();
+    let nrows = arr.nrows();
     let mut out = arr;
 
     for mut col in out.column_iter_mut() {
@@ -118,7 +114,7 @@ pub fn col_broadcast_add<Real, R, C, SM, SV>(
 }
 
 pub fn col_broadcast_sub<Real, R, C, SM, SV>(
-    mut arr: Matrix<Real, R, C, SM>,
+    arr: Matrix<Real, R, C, SM>,
     vec: &Matrix<Real, C, U1, SV>,
 ) -> Matrix<Real, R, C, SM>
     where
@@ -132,7 +128,7 @@ pub fn col_broadcast_sub<Real, R, C, SM, SV>(
 {
     assert_eq!(arr.nrows(), vec.len());
 
-    let mut nrows = arr.nrows();
+    let nrows = arr.nrows();
     let mut out = arr;
 
     for mut col in out.column_iter_mut() {

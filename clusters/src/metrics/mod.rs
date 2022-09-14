@@ -1,9 +1,8 @@
 use std::collections::HashMap;
-use nalgebra::{DMatrix, RowDVector};
 pub use nmi::*;
+pub use ic::*;
 use crate::callback::EvalData;
 use crate::params::thin::ThinParams;
-use crate::state::GlobalState;
 
 
 mod nmi;

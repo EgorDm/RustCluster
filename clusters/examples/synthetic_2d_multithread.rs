@@ -1,28 +1,15 @@
-use std::borrow::BorrowMut;
-use std::cell::RefCell;
-use std::f64::consts::PI;
-use std::io::Read;
-use std::rc::Rc;
-use std::sync::{Arc, Mutex, RwLock};
-use std::thread;
-use std::time::Instant;
-use crossbeam_channel::unbounded;
 use nalgebra::{DMatrix, DVector, Dynamic, Matrix, Storage};
 use ndarray::{Array1, Array2};
 use ndarray_npy::read_npy;
 use plotters::prelude::*;
-use rand::prelude::{SmallRng, StdRng};
-use rand::{Rng, SeedableRng};
-use clusters::params::options::{FitOptions, ModelOptions};
-use clusters::plotting::{axes_range_from_points, Cluster2D, init_axes2d};
-use clusters::stats::{NIW, NIWStats, SufficientStats};
-use rayon::prelude::*;
+use rand::prelude::StdRng;
 use clusters::callback::MonitoringCallback;
-use clusters::metrics::NMI;
+use clusters::metrics::{AIC, NMI};
 use clusters::model::Model;
 use clusters::params::clusters::SuperClusterParams;
-use clusters::state::{GlobalState, LocalWorker, ShardedState};
-use clusters::state::GlobalWorker;
+use clusters::params::options::{FitOptions, ModelOptions};
+use clusters::plotting::{axes_range_from_points, Cluster2D, init_axes2d};
+use clusters::stats::NIW;
 
 
 fn plot<S: Storage<f64, Dynamic, Dynamic>>(
@@ -67,13 +54,7 @@ fn main() {
     let y = DVector::from_row_slice(&y_data.as_slice().unwrap());
     let y = y.map(|x| x as usize).into_owned().transpose();
 
-    // let mut rng = SmallRng::seed_from_u64(42);
-    let mut rng = StdRng::seed_from_u64(42);
-    let plot_idx: Vec<usize> = (0..1000).map(|_| rng.gen_range(0..x.ncols())).collect();
-    let plot_x = x.select_columns(&plot_idx);
-
     let dim = x.nrows();
-
     let mut model_options = ModelOptions::<NIW>::default(dim);
     model_options.alpha = 100.0;
     model_options.outlier = None;

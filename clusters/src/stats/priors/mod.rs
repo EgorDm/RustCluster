@@ -3,7 +3,7 @@ use std::iter::Sum;
 use std::ops::{Add, AddAssign};
 use nalgebra::{Dynamic, Matrix, Storage};
 use rand::Rng;
-use serde::{Deserialize, Serialize};
+use serde::{Serialize};
 use serde::de::DeserializeOwned;
 use statrs::distribution::MultivariateNormal;
 

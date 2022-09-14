@@ -1,29 +1,21 @@
-use std::f64::consts::PI;
-use std::io::Read;
-use std::time::Instant;
 use nalgebra::{DMatrix, DVector, Dynamic, Matrix, Storage};
 use ndarray::{Array1, Array2};
 use ndarray_npy::read_npy;
 use plotters::prelude::*;
-use rand::prelude::{SmallRng, StdRng};
-use rand::{Rng, SeedableRng};
 use clusters::callback::MonitoringCallback;
-use clusters::state::{GlobalWorker, GlobalState, LocalState, LocalWorker};
-use clusters::metrics::{NMI, normalized_mutual_info_score};
-use clusters::callback::EvalData;
+use clusters::metrics::{AIC, NMI};
 use clusters::model::Model;
 use clusters::params::clusters::SuperClusterParams;
 use clusters::params::options::{FitOptions, ModelOptions};
 use clusters::plotting::{axes_range_from_points, Cluster2D, init_axes2d};
-use clusters::stats::{FromData, NIW, NIWStats, SufficientStats};
+use clusters::stats::NIW;
 
 fn plot<S: Storage<f64, Dynamic, Dynamic>>(
     path: &str,
     points: &Matrix<f64, Dynamic, Dynamic, S>, labels: &[usize], clusters: &[SuperClusterParams<NIW>]
 ) {
     let root = BitMapBackend::new(path, (1024, 768)).into_drawing_area();
-    let (mut range_x, mut range_y) = axes_range_from_points(points);
-    // let (mut range_x, mut range_y) = (-50.0..50.0, -50.0..50.0);
+    let (range_x, range_y) = axes_range_from_points(points);
     let mut plot_ctx = init_axes2d((range_x, range_y), &root);
 
     plot_ctx.draw_series(
@@ -75,6 +67,7 @@ fn main() {
         &x, Some(&y), 1000,
     );
     callback.add_metric(NMI);
+    callback.add_metric(AIC);
     callback.set_verbose(true);
 
     model.fit(
