@@ -7,6 +7,7 @@ pub mod plotting;
 pub mod stats;
 pub mod state;
 pub mod params;
+pub mod callback;
 
 #[cfg(test)]
 mod tests {

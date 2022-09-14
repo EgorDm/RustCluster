@@ -6,7 +6,7 @@ use itertools::Itertools;
 use num_traits::{FromPrimitive, PrimInt};
 use num_traits::real::Real;
 use simba::scalar::SupersetOf;
-use crate::metrics::{EvaluationData, Metric};
+use crate::metrics::{EvalData, Metric};
 use crate::params::thin::{MixtureParams, SuperMixtureParams, ThinParams};
 use crate::utils::{unique_with_indices};
 
@@ -112,7 +112,8 @@ pub struct NMI;
 impl<P: ThinParams> Metric<P> for NMI {
     fn compute(
         &mut self,
-        data: &EvaluationData,
+        _i: usize,
+        data: &EvalData,
         params: &P,
         metrics: &mut HashMap<String, f64>,
     ) {

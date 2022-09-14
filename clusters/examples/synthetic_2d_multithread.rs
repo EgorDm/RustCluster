@@ -13,11 +13,12 @@ use ndarray_npy::read_npy;
 use plotters::prelude::*;
 use rand::prelude::{SmallRng, StdRng};
 use rand::{Rng, SeedableRng};
-use clusters::metrics::{EvaluationData, NMI, normalized_mutual_info_score};
 use clusters::params::options::{FitOptions, ModelOptions};
 use clusters::plotting::{axes_range_from_points, Cluster2D, init_axes2d};
 use clusters::stats::{NIW, NIWStats, SufficientStats};
 use rayon::prelude::*;
+use clusters::callback::MonitoringCallback;
+use clusters::metrics::NMI;
 use clusters::model::Model;
 use clusters::params::clusters::SuperClusterParams;
 use clusters::state::{GlobalState, LocalWorker, ShardedState};
@@ -83,15 +84,16 @@ fn main() {
     fit_options.workers = 10;
 
     let mut model = Model::from_options(model_options);
+    let mut callback = MonitoringCallback::from_data(
+        &x, Some(&y), 1000,
+    );
+    callback.add_metric(NMI);
+    callback.set_verbose(true);
+
     model.fit(
         x.clone_owned(),
         &fit_options,
-        Some(EvaluationData {
-            points: x.clone_owned(),
-            labels: Some(y.clone_owned()),
-        }),
-        // Some(NMI),
-        None::<NMI>,
+        Some(callback),
     );
 
     // let mut rng = StdRng::seed_from_u64(fit_options.seed);

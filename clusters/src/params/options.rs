@@ -41,9 +41,7 @@ pub struct FitOptions {
     pub iters: usize,
     pub argmax_sample_stop: usize,
     pub iter_split_stop: usize,
-    pub verbose: bool,
     pub workers: i32,
-    pub max_eval_points: usize,
 }
 
 impl Default for FitOptions {
@@ -56,9 +54,7 @@ impl Default for FitOptions {
             iters: 100,
             argmax_sample_stop: 5,
             iter_split_stop: 5,
-            verbose: true,
             workers: 1,
-            max_eval_points: 1000,
         }
     }
 }

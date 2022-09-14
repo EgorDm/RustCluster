@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use itertools::izip;
 use nalgebra::RowDVector;
 use statrs::statistics::Statistics;
-use crate::metrics::{EvaluationData, Metric};
+use crate::metrics::{EvalData, Metric};
 use crate::params::thin::{hard_assignment, MixtureParams, SuperMixtureParams, ThinParams};
 
 pub fn aic(
@@ -25,7 +25,13 @@ pub fn bic(
 pub struct AIC;
 
 impl<P: ThinParams> Metric<P> for AIC {
-    fn compute(&mut self, data: &EvaluationData, params: &P, metrics: &mut HashMap<String, f64>) {
+    fn compute(
+        &mut self,
+        _i: usize,
+        data: &EvalData,
+        params: &P,
+        metrics: &mut HashMap<String, f64>
+    ) {
         let log_likelihood = SuperMixtureParams(params).log_likelihood(data.points.clone_owned());
         let mut labels = RowDVector::zeros(data.points.ncols());
         hard_assignment(&log_likelihood, labels.as_mut_slice());
