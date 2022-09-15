@@ -1,9 +1,8 @@
 use std::mem::MaybeUninit;
-use nalgebra::{DefaultAllocator, Dim, DMatrix, Matrix, Scalar, Storage, StorageMut, U1};
+use nalgebra::{DefaultAllocator, Dim, DMatrix, Matrix, Scalar, Storage, StorageMut, U1, RealField};
 use std::collections::HashMap;
 use std::hash::Hash;
 use nalgebra::allocator::Allocator;
-use simba::scalar::RealField;
 
 pub trait Iterutils : Iterator {
     fn bincounts(self, n_bins: usize) -> Vec<usize>
@@ -193,9 +192,7 @@ pub fn group_sort<T>(
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
     use nalgebra::{DMatrix, DVector};
-    use num_traits::real::Real;
     use crate::stats::tests::test_almost_mat;
     use crate::utils::{col_broadcast_sub, Iterutils};
     use crate::utils::data::{col_broadcast_add};

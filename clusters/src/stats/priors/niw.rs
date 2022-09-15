@@ -180,7 +180,7 @@ mod tests {
     use rand::prelude::StdRng;
     use rand::SeedableRng;
     use statrs::assert_almost_eq;
-    use crate::stats::{ConjugatePrior, FromData, NIW, NIWParams, NIWStats, SufficientStats};
+    use crate::stats::{ConjugatePrior, FromData, NIW, NIWParams, NIWStats};
     use crate::stats::tests::{points1, test_almost_mat};
 
     fn points0() -> DMatrix<f64> {

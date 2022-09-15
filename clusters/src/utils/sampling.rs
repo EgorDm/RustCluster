@@ -1,4 +1,4 @@
-use num_traits::Float;
+use nalgebra::{RealField};
 use rand::distributions::uniform::SampleUniform;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
@@ -26,7 +26,7 @@ pub fn reservoir_sampling<T: Copy, I: Iterator<Item=T>>(
 }
 
 pub fn reservoir_sampling_weighted<
-    W: Float + SampleUniform, I: Iterator<Item=W>
+    W: RealField + Copy + SampleUniform, I: Iterator<Item=W>
 >(
     rng: &mut impl Rng,
     mut src: I,
@@ -58,7 +58,7 @@ pub fn reservoir_sampling_weighted<
 }
 
 pub fn replacement_sampling_weighted<
-    W: Float + SampleUniform + Default + for<'a> core::ops::AddAssign<&'a W>,
+    W: RealField + SampleUniform + Default + for<'a> core::ops::AddAssign<&'a W>,
     I: Iterator<Item=W>
 >(
     rng: &mut impl Rng,

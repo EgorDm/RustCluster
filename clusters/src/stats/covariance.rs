@@ -1,7 +1,5 @@
-use nalgebra::{DefaultAllocator, Dim, Matrix, OMatrix, RawStorage, RawStorageMut, Scalar, Storage, U1};
+use nalgebra::{DefaultAllocator, Dim, Matrix, OMatrix, RawStorage, RawStorageMut, Scalar, Storage, U1, RealField};
 use nalgebra::allocator::Allocator;
-use simba::scalar::{Field, SupersetOf};
-use statrs::assert_almost_eq;
 
 pub trait Covariance<T, R: Dim, C: Dim> {
     fn row_cov(&self) -> OMatrix<T, C, C>
@@ -22,7 +20,7 @@ pub trait CovarianceMut<T, R: Dim, C: Dim> {
 impl<
     T: Scalar, R: Dim, C: Dim, S: RawStorage<T, R, C> + Storage<T, R, C>
 > Covariance<T, R, C> for Matrix<T, R, C, S>
-    where T: Field + SupersetOf<f64>,
+    where T: RealField,
           DefaultAllocator: Allocator<T, U1, R>,
           DefaultAllocator: Allocator<T, U1, C>,
           DefaultAllocator: Allocator<T, R, U1>,
@@ -44,9 +42,9 @@ impl<
 }
 
 impl<
-    T: Scalar, R: Dim, C: Dim, S: RawStorage<T, R, C> + RawStorageMut<T, R, C> + Storage<T, R, C>
+    T, R: Dim, C: Dim, S: RawStorage<T, R, C> + RawStorageMut<T, R, C> + Storage<T, R, C>
 > CovarianceMut<T, R, C> for Matrix<T, R, C, S>
-    where T: Field + SupersetOf<f64>,
+    where T: RealField,
           DefaultAllocator: Allocator<T, U1, C>,
           DefaultAllocator: Allocator<T, R, U1>,
           DefaultAllocator: Allocator<T, C, R>,
@@ -76,23 +74,6 @@ impl<
     }
 }
 
-pub fn test_almost_mat<R1: Dim, C1: Dim, R2: Dim, C2: Dim>(
-    value: &OMatrix<f64, R1, C1>,
-    expected: &OMatrix<f64, R2, C2>,
-    acc: f64,
-)
-    where DefaultAllocator: nalgebra::allocator::Allocator<f64, R1, C1>,
-          DefaultAllocator: nalgebra::allocator::Allocator<f64, R2, C2> {
-
-    assert_eq!(value.nrows(), expected.nrows());
-    assert_eq!(value.ncols(), expected.ncols());
-    for i in 0..value.nrows() {
-        for j in 0..value.ncols() {
-            assert_almost_eq!(expected[(i, j)], value[(i, j)], acc);
-        }
-    }
-}
-
 
 #[cfg(test)]
 pub mod tests {
@@ -107,7 +88,6 @@ pub mod tests {
     )
         where DefaultAllocator: nalgebra::allocator::Allocator<f64, R1, C1>,
               DefaultAllocator: nalgebra::allocator::Allocator<f64, R2, C2> {
-
         assert_eq!(value.nrows(), expected.nrows());
         assert_eq!(value.ncols(), expected.ncols());
         for i in 0..value.nrows() {

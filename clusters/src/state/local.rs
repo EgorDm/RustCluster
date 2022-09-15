@@ -204,7 +204,6 @@ impl<P: NormalConjugatePrior> LocalWorker<P> for LocalState<P> {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
     use nalgebra::{DMatrix, DVector, RowDVector};
     use rand::prelude::StdRng;
     use rand::{Rng, SeedableRng};
@@ -212,7 +211,7 @@ mod tests {
     use crate::params::clusters::SuperClusterStats;
     use crate::params::thin::{OwnedThinParams, ThinParams};
     use crate::state::{LocalState, LocalWorker};
-    use crate::stats::{FromData, NIW, NIWStats, SufficientStats};
+    use crate::stats::{FromData, NIW, NIWStats};
     use crate::stats::tests::test_almost_mat;
 
     #[test]

@@ -3,11 +3,12 @@ extern crate core;
 pub mod utils;
 pub mod model;
 pub mod metrics;
-pub mod plotting;
 pub mod stats;
 pub mod state;
 pub mod params;
 pub mod callback;
+#[cfg(feature = "plot")]
+pub mod plotting;
 
 pub use model::Model;
 pub use params::{FitOptions, ModelOptions};

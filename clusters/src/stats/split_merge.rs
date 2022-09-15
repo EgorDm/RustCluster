@@ -78,7 +78,6 @@ mod tests {
     use nalgebra::{DMatrix, DVector};
     use statrs::assert_almost_eq;
     use statrs::distribution::MultivariateNormal;
-    use statrs::prec::almost_eq;
     use crate::params::clusters::ClusterParams;
     use crate::stats::{NIW, NIWParams, NIWStats, PriorHyperParams, SplitMerge};
     use crate::utils::each_ref;

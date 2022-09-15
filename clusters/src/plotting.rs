@@ -1,12 +1,15 @@
 use std::f64::consts::PI;
 use std::marker::PhantomData;
 use std::ops::{Index, Range};
+use std::path::PathBuf;
 use nalgebra::{Dynamic, Matrix, Storage};
 use plotters::coord::Shift;
 use plotters::coord::types::RangedCoordf64;
 use plotters::element::{Drawable, PointCollection};
 use plotters::prelude::*;
 use plotters_backend::{BackendCoord, DrawingErrorKind};
+use crate::callback::{EvalData, Callback};
+use crate::params::{ThinParams, SuperMixtureParams, MixtureParams};
 
 pub type PointF = (f64, f64);
 
@@ -133,4 +136,62 @@ pub fn init_axes2d<
     plot_ctx
 }
 
-// pub fn plot_
+
+pub struct PlotCallback {
+    freq: usize,
+    data: EvalData,
+    path: PathBuf,
+}
+
+impl PlotCallback {
+    pub fn new(freq: usize, path: PathBuf, data: EvalData) -> Self {
+        Self { freq, data, path }
+    }
+}
+
+impl<P: ThinParams> Callback<P> for PlotCallback {
+    fn during_step(&mut self, i: usize, params: &P) {
+        if i % self.freq != 0 { return; }
+
+        let path = self.path.join(format!("step_{:04}.png", i));
+        if let Some(labels) = &self.data.labels {
+            plot(&path, &self.data.points, labels.as_slice(), &SuperMixtureParams(params));
+        }
+    }
+}
+
+
+fn plot<S: Storage<f64, Dynamic, Dynamic>>(
+    path: &PathBuf,
+    points: &Matrix<f64, Dynamic, Dynamic, S>,
+    labels: &[usize],
+    params: &impl MixtureParams,
+) {
+    let root = BitMapBackend::new(path, (1024, 768)).into_drawing_area();
+    let (range_x, range_y) = axes_range_from_points(points);
+    let mut plot_ctx = init_axes2d((range_x, range_y), &root);
+
+    plot_ctx.draw_series(
+        points
+            .column_iter()
+            .zip(labels.iter())
+            .map(|(row, label)|
+                Circle::new((row[0], row[1]), 2, Palette99::pick(*label).mix(0.9).filled())),
+    ).unwrap();
+
+    for k in 0..params.n_clusters() {
+        let cluster = params.dist(k);
+
+        plot_ctx.draw_series(
+            Cluster2D::from_mat(
+                cluster.mu(), cluster.cov(),
+                50,
+                Palette99::pick(k).filled(),
+                Palette99::pick(k).stroke_width(2),
+            )
+        ).unwrap();
+    }
+
+    root.present().expect("Unable to write result to file, please make sure 'plotters-doc-data' dir exists under current dir");
+    println!("Result has been saved to {}", path.to_str().unwrap());
+}

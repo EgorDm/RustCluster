@@ -1,14 +1,10 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::time::Instant;
 use itertools::Itertools;
-use nalgebra::{DMatrix, Dynamic, Matrix, RowDVector, Storage};
-use plotters::prelude::*;
+use nalgebra::{DMatrix, RowDVector};
 use rand::prelude::*;
 use crate::metrics::{Metric};
-use crate::params::{MixtureParams, SuperMixtureParams};
 use crate::params::thin::ThinParams;
-use crate::plotting::{axes_range_from_points, Cluster2D, init_axes2d};
 use crate::utils::reservoir_sampling;
 
 pub trait Callback<P: ThinParams> {
@@ -106,63 +102,4 @@ impl<P: ThinParams> Callback<P> for MonitoringCallback<P> {
     }
 }
 
-
-pub struct PlotCallback {
-    freq: usize,
-    data: EvalData,
-    path: PathBuf,
-}
-
-impl PlotCallback {
-    pub fn new(freq: usize, path: PathBuf, data: EvalData) -> Self {
-        Self { freq, data, path }
-    }
-}
-
-impl<P: ThinParams> Callback<P> for PlotCallback {
-    fn during_step(&mut self, i: usize, params: &P) {
-        if i % self.freq != 0 { return; }
-
-        let path = self.path.join(format!("step_{:04}.png", i));
-        if let Some(labels) = &self.data.labels {
-            plot(&path, &self.data.points, labels.as_slice(), &SuperMixtureParams(params));
-        }
-    }
-}
-
-
-fn plot<S: Storage<f64, Dynamic, Dynamic>>(
-    path: &PathBuf,
-    points: &Matrix<f64, Dynamic, Dynamic, S>,
-    labels: &[usize],
-    params: &impl MixtureParams
-) {
-    let root = BitMapBackend::new(path, (1024, 768)).into_drawing_area();
-    let (range_x, range_y) = axes_range_from_points(points);
-    let mut plot_ctx = init_axes2d((range_x, range_y), &root);
-
-    plot_ctx.draw_series(
-        points
-            .column_iter()
-            .zip(labels.iter())
-            .map(|(row, label)|
-                Circle::new((row[0], row[1]), 2, Palette99::pick(*label).mix(0.9).filled())),
-    ).unwrap();
-
-    for k in 0..params.n_clusters() {
-        let cluster = params.dist(k);
-
-        plot_ctx.draw_series(
-            Cluster2D::from_mat(
-                cluster.mu(), cluster.cov(),
-                50,
-                Palette99::pick(k).filled(),
-                Palette99::pick(k).stroke_width(2),
-            )
-        ).unwrap();
-    }
-
-    root.present().expect("Unable to write result to file, please make sure 'plotters-doc-data' dir exists under current dir");
-    println!("Result has been saved to {}", path.to_str().unwrap());
-}
 
