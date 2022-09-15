@@ -1,46 +1,8 @@
-use nalgebra::{DMatrix, DVector, Dynamic, Matrix, Storage};
+use nalgebra::{DMatrix, DVector, Dynamic, Matrix};
 use ndarray::{Array1, Array2};
 use ndarray_npy::read_npy;
-use plotters::prelude::*;
-use clusters::callback::MonitoringCallback;
-use clusters::metrics::{AIC, NMI};
-use clusters::model::Model;
-use clusters::params::clusters::SuperClusterParams;
-use clusters::params::options::{FitOptions, ModelOptions};
-use clusters::plotting::{axes_range_from_points, Cluster2D, init_axes2d};
-use clusters::stats::NIW;
-
-fn plot<S: Storage<f64, Dynamic, Dynamic>>(
-    path: &str,
-    points: &Matrix<f64, Dynamic, Dynamic, S>, labels: &[usize], clusters: &[SuperClusterParams<NIW>]
-) {
-    let root = BitMapBackend::new(path, (1024, 768)).into_drawing_area();
-    let (range_x, range_y) = axes_range_from_points(points);
-    let mut plot_ctx = init_axes2d((range_x, range_y), &root);
-
-    plot_ctx.draw_series(
-        points
-            .column_iter()
-            .zip(labels.iter())
-            .map(|(row, label)|
-                Circle::new((row[0], row[1]), 2, Palette99::pick(*label).mix(0.9).filled())),
-    ).unwrap();
-
-    for (k, cluster) in clusters.iter().enumerate() {
-        plot_ctx.draw_series(
-            Cluster2D::from_mat(
-                cluster.prim.dist.mu(), cluster.prim.dist.cov(),
-                50,
-                Palette99::pick(k).filled(),
-                Palette99::pick(k).stroke_width(2),
-            )
-        ).unwrap();
-    }
-
-    root.present().expect("Unable to write result to file, please make sure 'plotters-doc-data' dir exists under current dir");
-    println!("Result has been saved to {}", path);
-}
-
+use clusters::{AIC, FitOptions, Model, ModelOptions, MonitoringCallback, NIW, NMI};
+use clusters::callback::{EvalData, PlotCallback};
 
 fn main() {
     println!("Hello, world!");
@@ -64,10 +26,15 @@ fn main() {
 
     let mut model = Model::from_options(model_options);
     let mut callback = MonitoringCallback::from_data(
-        &x, Some(&y), 1000,
+        EvalData::from_sample(&x, Some(&y), 1000)
     );
     callback.add_metric(NMI);
     callback.add_metric(AIC);
+    // callback.add_callback(PlotCallback::new(
+    //     3,
+    //     "examples/data/plot/synthetic_2d".into(),
+    //     EvalData::from_sample(&x, Some(&y), 1000)
+    // ));
     callback.set_verbose(true);
 
     model.fit(
