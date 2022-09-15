@@ -1,18 +1,16 @@
-use nalgebra::{DMatrix, DVector};
-use ndarray::{Array1, Array2};
-use ndarray_npy::read_npy;
+use std::fs::File;
+use nalgebra::{DMatrix, RowDVector};
 use clusters::{AIC, FitOptions, Model, ModelOptions, MonitoringCallback, NIW, NMI};
 use clusters::callback::{EvalData};
 use clusters::plotting::{PlotCallback};
+use bincode::{deserialize_from};
+
 
 fn main() {
-    println!("Hello, world!");
-
-    let x_data: Array2<f64> = read_npy("examples/data/x.npy").unwrap();
-    let x = DMatrix::from_row_slice(x_data.nrows(), x_data.ncols(), &x_data.as_slice().unwrap()).transpose();
-    let y_data: Array1<i64> = read_npy("examples/data/y.npy").unwrap();
-    let y = DVector::from_row_slice(&y_data.as_slice().unwrap());
-    let y = y.map(|x| x as usize).into_owned().transpose();
+    let mut f = File::open("examples/data/x.bin").unwrap();
+    let x: DMatrix<f64> = deserialize_from(&mut f).unwrap();
+    let mut f = File::open("examples/data/y.bin").unwrap();
+    let y: RowDVector<usize> = deserialize_from(&mut f).unwrap();
 
     let dim = x.nrows();
 

@@ -2,6 +2,7 @@
 name = "clusters"
 version = "0.1.0"
 edition = "2021"
+resolver = "2"
 
 [dependencies]
 rand = { version = "0.8", features = ["small_rng"], default-features = false }
@@ -16,17 +17,20 @@ plotters-backend = { git = 'https://github.com/plotters-rs/plotters?rev=b1dc7a',
 
 [dev-dependencies]
 criterion = { version = "0.3", features = ["html_reports"] }
-ndarray-npy = "0.8.1"
-ndarray = "0.15.4"
+bincode = "1.3.3"
 
 [features]
 default = ["plot"]
 plot = ["dep:plotters", "dep:plotters-backend"]
 
-[[example]]
-name = "parallellism"
-
 [[bench]]
 name = "clusters_bench"
 harness = false
 path = "benches/lib.rs"
+
+
+[[example]]
+name = "clustering"
+
+[[example]]
+name = "clustering_multithread"

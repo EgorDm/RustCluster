@@ -38,7 +38,7 @@ pub fn reservoir_sampling_weighted<
     for dst_v in dst.iter_mut() {
         if let Some(w) = src.next() {
             *dst_v = i;
-            w_sum = w_sum + w;
+            w_sum += w;
             n += 1;
         } else {
             break;
@@ -47,7 +47,7 @@ pub fn reservoir_sampling_weighted<
     }
 
     for w in src {
-        w_sum = w_sum + w;
+        w_sum += w;
         let j = rng.gen_range(W::zero()..w_sum);
         if j < w {
             dst[rng.gen_range(0..dst.len())] = i;

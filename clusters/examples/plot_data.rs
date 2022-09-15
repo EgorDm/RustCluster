@@ -1,4 +1,5 @@
-use nalgebra::{DMatrix, DVector};
+use std::fs::File;
+use nalgebra::{DMatrix, DVector, RowDVector};
 use ndarray::{Array1, Array2};
 use ndarray_npy::read_npy;
 use plotters::coord::Shift;
@@ -10,11 +11,10 @@ use clusters::stats::Covariance;
 const PATH: &str = "examples/data/plot/plot_data.png";
 
 fn main() {
-    let x_data: Array2<f64> = read_npy("examples/data/x.npy").unwrap();
-    let x = DMatrix::from_row_slice(x_data.nrows(), x_data.ncols(), &x_data.as_slice().unwrap()).transpose();
-    let y_data: Array1<i64> = read_npy("examples/data/y.npy").unwrap();
-    let y = DVector::from_row_slice(&y_data.as_slice().unwrap());
-    let y = y.map(|x| x as usize).into_owned().transpose();
+    let mut f = File::open("examples/data/x.bin").unwrap();
+    let x: DMatrix<f64> = deserialize_from(&mut f).unwrap();
+    let mut f = File::open("examples/data/y.bin").unwrap();
+    let y: RowDVector<usize> = deserialize_from(&mut f).unwrap();
 
     let (mut range_x, mut range_y) = axes_range_from_points(&x);
     let root: DrawingArea<BitMapBackend, Shift> = BitMapBackend::new(PATH, (1024, 768)).into_drawing_area();
