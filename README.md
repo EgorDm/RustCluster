@@ -3,9 +3,15 @@
 <div align="center">
     <h1>mixturs</h1>
     <p>
-       <img alt="Crates.io" src="https://img.shields.io/crates/v/mixturs">
-       <a href="LICENSE"><img src="https://img.shields.io/github/license/EgorDm/mixturs" alt="License"></a>
- <a href="https://docs.rs/mixturs"><img src="https://img.shields.io/docsrs/mixturs" alt="Docs"></a>
+        <a href="https://crates.io/crates/mixturs">
+            <img alt="Crates.io" src="https://img.shields.io/crates/v/mixturs">
+        </a>
+        <a href="LICENSE">
+            <img src="https://img.shields.io/github/license/EgorDm/mixturs" alt="License">
+        </a>
+        <a href="https://docs.rs/mixturs">
+            <img src="https://img.shields.io/docsrs/mixturs" alt="Docs">
+        </a>
     </p>
     <p>
         <b>Unofficial implementation of Dirichlet Process Mixture Model Split/Merge algorithm.</b>
