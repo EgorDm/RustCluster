@@ -92,7 +92,10 @@ mod tests {
                 mean_sum: DVector::from_vec(vec![53421.49186074734, 766.8183973431587]),
                 cov_sum: DMatrix::from_vec(2, 2, vec![445925.3699037639, 19567.09899818292, 19567.09899818292, 1146748.4105307986]),
             },
-            MultivariateNormal::new(DVector::zeros(2), DMatrix::identity(2, 2)).unwrap()
+            MultivariateNormal::new(
+                DVector::zeros(2).data.into(),
+                DMatrix::identity(2, 2).data.into()
+            ).unwrap()
         );
 
         let aux_params = [
@@ -104,7 +107,10 @@ mod tests {
                     mean_sum: DVector::from_vec(vec![-953.5522114038467, -7957.599519848824]),
                     cov_sum: DMatrix::from_vec(2, 2, vec![2135.7392811890277, 1127.9554153340587, 1127.9554153340587, 27002.447292295525]),
                 },
-                MultivariateNormal::new(DVector::zeros(2), DMatrix::identity(2, 2)).unwrap()
+                MultivariateNormal::new(
+                    DVector::zeros(2).data.into(),
+                    DMatrix::identity(2, 2).data.into()
+                ).unwrap()
             ),
             ClusterParams::<NIW>::new(
                 NIWParams::default(2),
@@ -114,7 +120,10 @@ mod tests {
                     mean_sum: DVector::from_vec(vec![54375.044072151184, 8724.417917191982]),
                     cov_sum: DMatrix::from_vec(2, 2, vec![443789.63062257477, 18439.143582848767, 18439.143582848767, 1119745.9632385024]),
                 },
-                MultivariateNormal::new(DVector::zeros(2), DMatrix::identity(2, 2)).unwrap()
+                MultivariateNormal::new(
+                    DVector::zeros(2).data.into(),
+                    DMatrix::identity(2, 2).data.into()
+                ).unwrap()
             )
         ];
 

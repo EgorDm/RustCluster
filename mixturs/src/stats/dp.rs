@@ -3,6 +3,27 @@ use rand::distributions::{Distribution};
 use rand::Rng;
 use statrs::distribution::{Dirichlet};
 
+/// Samples the dirichlet process using the stick breaking approach.
+///
+/// # Arguments:
+///
+/// * `counts`: the number of observations in each cluster
+/// * `alpha`: the probability of a new cluster being created
+/// * `rng`: a random number generator
+///
+/// # Returns:
+///
+/// A vector of weights for each cluster.
+///
+/// # Example:
+/// ```
+/// use mixturs::stats::stick_breaking_sample;
+///
+/// let mut rng = rand::thread_rng();
+/// let counts = vec![1.0, 2.0, 3.0];
+/// let alpha = 1.0;
+/// let weights = stick_breaking_sample(&counts, alpha, &mut rng);
+/// ```
 pub fn stick_breaking_sample(
     counts: &[f64], alpha: f64, rng: &mut impl Rng
 ) -> Vec<f64> {

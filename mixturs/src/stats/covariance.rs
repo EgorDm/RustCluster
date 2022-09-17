@@ -2,17 +2,21 @@ use nalgebra::{DefaultAllocator, Dim, Matrix, OMatrix, RawStorage, RawStorageMut
 use nalgebra::allocator::Allocator;
 
 pub trait Covariance<T, R: Dim, C: Dim> {
+    /// Returns row-wise covariance matrix of the given matrix.
     fn row_cov(&self) -> OMatrix<T, C, C>
         where DefaultAllocator: Allocator<T, C, C>;
 
+    /// Returns column-wise covariance matrix of the given matrix.
     fn col_cov(&self) -> OMatrix<T, R, R>
         where DefaultAllocator: Allocator<T, R, R>;
 }
 
 pub trait CovarianceMut<T, R: Dim, C: Dim> {
+    /// Returns row-wise covariance matrix of the given matrix.
     fn row_cov_mut(self) -> OMatrix<T, C, C>
         where DefaultAllocator: Allocator<T, C, C>;
 
+    /// Returns column-wise covariance matrix of the given matrix.
     fn col_cov_mut(self) -> OMatrix<T, R, R>
         where DefaultAllocator: Allocator<T, R, R>;
 }
@@ -28,12 +32,51 @@ impl<
           DefaultAllocator: Allocator<T, C, R>,
           DefaultAllocator: Allocator<T, R, C>,
 {
+    /// Returns row-wise covariance matrix of the given matrix.
+    ///
+    /// # Returns:
+    ///
+    /// A |C| x |C| covariance matrix.
+    ///
+    /// # Example:
+    /// ```
+    /// use nalgebra::{Matrix3x2, Matrix2x3, Matrix2};
+    /// use mixturs::stats::Covariance;
+    ///
+    /// let data = Matrix3x2::new(
+    ///     0.0, 2.0,
+    ///     1.0, 1.0,
+    ///     2.0, 0.0,
+    /// );
+    /// let cov = data.row_cov();
+    ///
+    /// assert_eq!(cov, Matrix2::new(1.0, -1.0, -1.0, 1.0) * 2.0 / 3.0);
+    /// ```
     fn row_cov(&self) -> OMatrix<T, C, C>
         where DefaultAllocator: Allocator<T, C, C>
     {
         self.transpose().col_cov_mut()
     }
 
+    /// Returns column-wise covariance matrix of the given matrix.
+    ///
+    /// # Returns:
+    ///
+    /// A |R| x |R| covariance matrix.
+    ///
+    /// # Example:
+    /// ```
+    /// use nalgebra::{Matrix2x3, Matrix2};
+    /// use mixturs::stats::Covariance;
+    ///
+    /// let data = Matrix2x3::new(
+    ///     0.0, 1.0, 2.0,
+    ///     2.0, 1.0, 0.0,
+    /// );
+    /// let cov = data.col_cov();
+    ///
+    /// assert_eq!(cov, Matrix2::new(1.0, -1.0, -1.0, 1.0) * 2.0 / 3.0);
+    /// ```
     fn col_cov(&self) -> OMatrix<T, R, R>
         where DefaultAllocator: Allocator<T, R, R>
     {
@@ -50,6 +93,26 @@ impl<
           DefaultAllocator: Allocator<T, C, R>,
           DefaultAllocator: Allocator<T, R, C>,
 {
+    /// Returns row-wise covariance matrix of the given matrix. Computation is done inplace.
+    ///
+    /// # Returns:
+    ///
+    /// A |C| x |C| covariance matrix.
+    ///
+    /// # Example:
+    /// ```
+    /// use nalgebra::{Matrix3x2, Matrix2x3, Matrix2};
+    /// use mixturs::stats::CovarianceMut;
+    ///
+    /// let data = Matrix3x2::new(
+    ///     0.0, 2.0,
+    ///     1.0, 1.0,
+    ///     2.0, 0.0,
+    /// );
+    /// let cov = data.row_cov_mut();
+    ///
+    /// assert_eq!(cov, Matrix2::new(1.0, -1.0, -1.0, 1.0) * 2.0 / 3.0);
+    /// ```
     fn row_cov_mut(mut self) -> OMatrix<T, C, C>
         where DefaultAllocator: Allocator<T, C, C>
     {
@@ -61,6 +124,25 @@ impl<
         self.transpose() * self / T::from_subset(&(n as f64))
     }
 
+    /// Returns column-wise covariance matrix of the given matrix. Computation is done inplace.
+    ///
+    /// # Returns:
+    ///
+    /// A |R| x |R| covariance matrix.
+    ///
+    /// # Example:
+    /// ```
+    /// use nalgebra::{Matrix2x3, Matrix2};
+    /// use mixturs::stats::CovarianceMut;
+    ///
+    /// let data = Matrix2x3::new(
+    ///     0.0, 1.0, 2.0,
+    ///     2.0, 1.0, 0.0,
+    /// );
+    /// let cov = data.col_cov_mut();
+    ///
+    /// assert_eq!(cov, Matrix2::new(1.0, -1.0, -1.0, 1.0) * 2.0 / 3.0);
+    /// ```
     fn col_cov_mut(mut self) -> OMatrix<T, R, R>
         where DefaultAllocator: Allocator<T, R, R>
     {

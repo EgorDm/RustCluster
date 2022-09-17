@@ -13,6 +13,7 @@ use crate::params::{ThinParams, SuperMixtureParams, MixtureParams};
 
 pub type PointF = (f64, f64);
 
+/// A drawable ellipse object
 pub struct Ellipse {
     center: PointF,
     size: [[f64; 2]; 2],
@@ -56,6 +57,8 @@ impl<DB: DrawingBackend> Drawable<DB> for Ellipse {
     }
 }
 
+
+/// A drawable cluster object
 pub struct Cluster2D<DB: DrawingBackend> {
     mu: PointF,
     cov: [[f64; 2]; 2],
@@ -102,6 +105,17 @@ impl<DB: DrawingBackend> IntoIterator for Cluster2D<DB> {
 }
 
 
+/// Computes the plot range for a given set of data
+///
+/// # Arguments
+///
+/// * `points`: The data points (n_dims, n_points)
+///
+/// # Returns:
+///
+/// A tuple containing:
+/// * X range
+/// * Y range
 pub fn axes_range_from_points<S: Storage<f64, Dynamic, Dynamic>>(
     points: &Matrix<f64, Dynamic, Dynamic, S>
 ) -> (Range<f64>, Range<f64>) {
@@ -116,6 +130,12 @@ pub fn axes_range_from_points<S: Storage<f64, Dynamic, Dynamic>>(
     (min_x..max_x, min_y..max_y)
 }
 
+/// Configures 2D plotting area and axes for plotting clusters
+///
+/// # Arguments
+///
+/// * `range`: The X and Y ranges
+/// * `root`: The root drawing area
 pub fn init_axes2d<
     'a, DB: 'a + DrawingBackend,
 >(
@@ -137,6 +157,7 @@ pub fn init_axes2d<
 }
 
 
+/// Callback for plotting the clustering state every `freq` iterations
 pub struct PlotCallback {
     freq: usize,
     data: EvalData,

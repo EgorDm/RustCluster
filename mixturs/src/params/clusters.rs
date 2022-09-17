@@ -6,13 +6,18 @@ use rand::{Rng, distributions::Distribution};
 use statrs::distribution::{Dirichlet, MultivariateNormal};
 use crate::stats::{NormalConjugatePrior, SufficientStats};
 
-
+/// Parameters for a supercluster.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SuperClusterParams<P: NormalConjugatePrior> {
+    /// Parameters for the primary cluster.
     pub prim: ClusterParams<P>,
+    /// Parameters for the two auxiliary clusters.
     pub aux: [ClusterParams<P>; 2],
+    /// Weights of the two auxiliary clusters.
     pub weights: [f64; 2],
+    /// Whether the supercluster is splittable.
     pub splittable: bool,
+    /// History of the log likelihood of the supercluster to detect convergence.
     pub ll_history: LLHistory,
 }
 
@@ -65,10 +70,12 @@ impl<P: NormalConjugatePrior> SuperClusterParams<P> {
         }
     }
 
+    /// Number of points in the supercluster.
     pub fn n_points(&self) -> usize {
         self.prim.n_points()
     }
 
+    /// Sample a new supercluster distributions given current supercluster params.
     pub fn sample<R: Rng + ?Sized>(&self, alpha: f64, rng: &mut R) -> (MultivariateNormal, [MultivariateNormal; 2], [f64; 2]) {
         let prim = self.prim.sample(rng);
         let aux = [self.aux[0].sample(rng), self.aux[1].sample(rng)];
@@ -81,6 +88,7 @@ impl<P: NormalConjugatePrior> SuperClusterParams<P> {
         (prim, aux, weights)
     }
 
+    /// Update the supercluster parameters given sufficient statistics gathered from data.
     pub fn update_post(&mut self, stats: SuperClusterStats<P>) {
         self.prim.update_post(stats.prim);
         for (i, stats_aux) in stats.aux.into_iter().enumerate() {
@@ -89,9 +97,12 @@ impl<P: NormalConjugatePrior> SuperClusterParams<P> {
     }
 }
 
+/// Sufficient statistics for a supercluster.
 #[derive(Debug, Clone)]
 pub struct SuperClusterStats<P: NormalConjugatePrior> {
+    /// Sufficient statistics for the primary cluster.
     pub prim: P::SuffStats,
+    /// Sufficient statistics for the two auxiliary clusters.
     pub aux: [P::SuffStats; 2],
 }
 
@@ -135,11 +146,16 @@ impl<P: NormalConjugatePrior> SufficientStats for SuperClusterStats<P> {
     }
 }
 
+/// Parameters for a cluster.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClusterParams<P: NormalConjugatePrior> {
+    /// Prior distribution params for the cluster.
     pub prior: P::HyperParams,
+    /// Posterior distribution params for the cluster.
     pub post: P::HyperParams,
+    /// Sufficient statistics for the cluster.
     pub stats: P::SuffStats,
+    /// Normal Distribution for the cluster.
     pub dist: MultivariateNormal,
 }
 
@@ -167,6 +183,7 @@ impl<P: NormalConjugatePrior> ClusterParams<P> {
 }
 
 
+/// Log likelihood history to track cluster convergence.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LLHistory {
     pub ll_history: VecDeque<f64>,

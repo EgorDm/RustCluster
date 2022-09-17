@@ -18,6 +18,24 @@ pub trait Iterutils : Iterator {
 
 impl<T: ?Sized> Iterutils for T where T: Iterator { }
 
+/// Returns an array of references to the elements of the given a sized slice.
+///
+/// Arguments:
+///
+/// * `data`: &[T; N]
+///
+/// Returns:
+///
+/// A reference to an array of references to the elements of the input array.
+///
+/// # Example:
+/// ```
+/// use mixturs::utils::each_ref;
+///
+/// let data = [1, 2, 3];
+/// let refs = each_ref(&data);
+/// assert_eq!(refs, [&data[0], &data[1], &data[2]]);
+/// ```
 pub fn each_ref<T, const N: usize>(data: &[T; N]) -> [&T; N] {
     // Unlike in `map`, we don't need a guard here, as dropping a reference
     // is a noop.
@@ -31,7 +49,27 @@ pub fn each_ref<T, const N: usize>(data: &[T; N]) -> [&T; N] {
     unsafe { (&mut out as *mut _ as *mut [&T; N]).read() }
 }
 
-
+/// Returns the unique elements of the given array and a similar array with the indices of the unique elements.
+///
+/// # Arguments:
+///
+/// * `data`: The data to be sorted.
+/// * `sorted`: If true, the unique values will be sorted.
+///
+/// # Returns:
+///
+/// A tuple of two arrays. The first array contains the unique values of the input array.
+/// The second array contains the indices of the unique values in the first array.
+///
+/// # Example:
+/// ```
+/// use mixturs::utils::unique_with_indices;
+///
+/// let data = [1, 2, 3, 2, 1, 3, 2, 1, 3];
+/// let (unique, indices) = unique_with_indices(&data, true);
+/// assert_eq!(unique, vec![1, 2, 3]);
+/// assert_eq!(indices, vec![0, 1, 2, 1, 0, 2, 1, 0, 2]);
+/// ```
 pub fn unique_with_indices<T: Copy + Hash + Eq + Ord>(data: &[T], sorted: bool) -> (Vec<T>, Vec<usize>) {
     let mut index = HashMap::new();
     let mut unique = Vec::new();
@@ -58,6 +96,32 @@ pub fn unique_with_indices<T: Copy + Hash + Eq + Ord>(data: &[T], sorted: bool) 
     (unique, unique_index)
 }
 
+/// Normalizes the log probabilities in the given matrix in a row-wise manner.
+///
+/// # Arguments:
+///
+/// * `weights`: The matrix of weights.
+///
+/// # Returns:
+///
+/// The log of the sum of the exponentials of the elements of the given array.
+///
+/// # Example:
+/// ```
+/// use mixturs::utils::row_normalize_log_weights;
+/// use nalgebra::DMatrix;
+///
+/// let mut weights = DMatrix::from_row_slice(2, 3, &[
+///     0.        , 0.69314718, 0.69314718,
+///     0.        , 0.69314718, 0.69314718,
+/// ]);
+/// let mut log_sum = row_normalize_log_weights(weights);
+/// log_sum.apply(|x| *x = (*x * 10.0).round() / 10.0);
+/// assert_eq!(log_sum, DMatrix::from_row_slice(2, 3, &[
+///     0.5, 1.0, 1.0,
+///     0.5, 1.0, 1.0,
+/// ]));
+/// ```
 pub fn row_normalize_log_weights(
     mut weights: DMatrix<f64>
 ) -> DMatrix<f64> {
@@ -70,7 +134,32 @@ pub fn row_normalize_log_weights(
     weights
 }
 
-
+/// Normalizes the log probabilities in the given matrix in a column-wise manner.
+///
+/// # Arguments:
+///
+/// * `weights`: The matrix of weights.
+///
+/// # Returns:
+///
+/// The log of the sum of the exponentials of the elements of the given array.
+///
+/// # Example:
+/// ```
+/// use nalgebra::DMatrix;
+/// use mixturs::utils::col_normalize_log_weights;
+///
+/// let mut weights = DMatrix::from_row_slice(2, 3, &[
+///    0.        , 0.69314718, 0.69314718,
+///    0.        , 0.69314718, 0.69314718,
+/// ]);
+/// let mut log_sum = col_normalize_log_weights(weights);
+/// log_sum.apply(|x| *x = (*x * 10.0).round() / 10.0);
+/// assert_eq!(log_sum, DMatrix::from_row_slice(2, 3, &[
+///    1.0, 1.0, 1.0,
+///    1.0, 1.0, 1.0,
+/// ]));
+/// ```
 pub fn col_normalize_log_weights(
     mut weights: DMatrix<f64>
 ) -> DMatrix<f64> {
@@ -164,6 +253,55 @@ pub fn col_scatter<T, R, CO, CI, SO, SI>(
     }
 }
 
+// pub fn group_sort<T>(
+//     counts: &[usize],
+//     data: impl IntoIterator<Item=T>,
+//     group_fn: impl Fn(T) -> usize,
+// ) -> (Vec<usize>, Vec<usize>) {
+//     // Compute offsets for each group
+//     let mut offsets = vec![0usize; counts.len() + 1];
+//     for i in 1..offsets.len() {
+//         offsets[i] += counts[i - 1] + offsets[i - 1];
+//     }
+//
+//     // Allocate resulting array
+//     let mut indices = vec![0; counts.iter().sum()];
+//
+//     // Copy the data into the correct group while updating the offsets
+//     let mut offsets_local = offsets.clone();
+//     for (i, item) in data.into_iter().enumerate() {
+//         let group = group_fn(item);
+//         let offset = &mut offsets_local[group];
+//         indices[*offset] = i;
+//         *offset += 1;
+//     }
+//
+//     (indices, offsets)
+// }
+
+/// Sorts the given data by the given group function in O(n) time.
+///
+/// # Arguments
+///
+/// * `counts`: The number of elements in each group.
+/// * `data`: The data to sort.
+/// * `group_fn`: A function that maps each element of `data` to a group.
+///
+/// # Returns
+///
+/// A tuple containing the sorted indices into data and the offsets of each group.
+///
+/// # Examples
+/// ```
+/// use mixturs::utils::group_sort;
+///
+/// let counts = vec![2, 2, 2];
+/// let data = vec![1usize, 2, 3, 4, 5, 6];
+/// let group_fn = |x| x % 3;
+/// let (indices, offsets) = group_sort(&counts, data, group_fn);
+/// assert_eq!(indices, vec![2, 5, 0, 3, 1, 4]);
+/// assert_eq!(offsets, vec![0, 2, 4, 6]);
+/// ```
 pub fn group_sort<T>(
     counts: &[usize],
     data: impl IntoIterator<Item=T>,

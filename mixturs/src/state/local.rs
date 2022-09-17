@@ -10,6 +10,7 @@ use crate::params::thin::{AuxMixtureParams, hard_assignment, MixtureParams, soft
 use crate::state::LocalWorker;
 
 
+/// Local state performs all computations on the locally on the data.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LocalState<P: NormalConjugatePrior> {
     pub data: DMatrix<f64>,
@@ -19,6 +20,13 @@ pub struct LocalState<P: NormalConjugatePrior> {
 }
 
 impl<P: NormalConjugatePrior> LocalState<P> {
+    /// Create a new local state.
+    ///
+    /// # Arguments
+    ///
+    /// * `data`: Data points matrix (n_dims, n_samples).
+    /// * `labels`: Primary cluster labels.
+    /// * `labels_aux`: Auxiliary cluster labels.
     pub fn new(
         data: DMatrix<f64>,
         labels: RowDVector<usize>,
@@ -27,16 +35,31 @@ impl<P: NormalConjugatePrior> LocalState<P> {
         Self { data, labels, labels_aux, _phantoms: PhantomData }
     }
 
+    /// Create a new local state from data
+    /// all labels are set to 0.
+    ///
+    /// # Arguments
+    ///
+    /// * `data`: Data points matrix (n_dims, n_samples).
     pub fn from_data(data: DMatrix<f64>) -> Self {
         let labels = RowDVector::zeros(data.ncols());
         let labels_aux = RowDVector::zeros(data.ncols());
         Self::new(data, labels, labels_aux)
     }
 
+    /// Number of points in the data.
     pub fn n_points(&self) -> usize {
         self.data.ncols()
     }
 
+    /// Samples primary labels given cluster parameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `params`: The cluster parameters
+    /// * `hard_assign`: Whether to perform hard assignment or soft assignment (i.e. sampling strategy)
+    /// * `rng`: The random number generator
+    ///
     pub fn apply_sample_labels_prim(
         &mut self,
         params: &impl ThinParams,
@@ -54,6 +77,14 @@ impl<P: NormalConjugatePrior> LocalState<P> {
         }
     }
 
+    /// Samples auxiliary labels given cluster parameters and their assignment to primary clusters.
+    ///
+    /// # Arguments
+    ///
+    /// * `params`: The cluster parameters
+    /// * `hard_assign`: Whether to perform hard assignment or soft assignment (i.e. sampling strategy)
+    /// * `rng`: The random number generator
+    ///
     pub fn apply_sample_labels_aux(
         &mut self,
         params: &impl ThinParams,
@@ -82,6 +113,19 @@ impl<P: NormalConjugatePrior> LocalState<P> {
         }
     }
 
+    /// Group sorts the data points by primary and auxiliary labels in O(n)
+    ///
+    /// # Arguments
+    ///
+    /// * `n_clusters`: Number of primary clusters
+    ///
+    /// # Returns
+    ///
+    /// Tuple containing:
+    /// * Sorted indices of to the data points
+    /// * Offsets of each cluster block
+    ///
+    /// Cluster blocks are labelled as block_id = prim * 2 + aux
     fn sorted_indices(&self, n_clusters: usize) -> (Vec<usize>, Vec<usize>) {
         // Split data points into contiguous blocks
         let n_blocks = n_clusters * 2;
@@ -265,12 +309,12 @@ mod tests {
         let params = OwnedThinParams {
             clusters: vec![
                 MultivariateNormal::new(
-                    DVector::from_vec(vec![0.0, 0.0]),
-                    DMatrix::from_diagonal_element(2, 2, 1.0),
+                    DVector::from_vec(vec![0.0, 0.0]).data.into(),
+                    DMatrix::from_diagonal_element(2, 2, 1.0).data.into(),
                 ).unwrap(),
                 MultivariateNormal::new(
-                    DVector::from_vec(vec![1.0, 1.0]),
-                    DMatrix::from_diagonal_element(2, 2, 1.0),
+                    DVector::from_vec(vec![1.0, 1.0]).data.into(),
+                    DMatrix::from_diagonal_element(2, 2, 1.0).data.into(),
                 ).unwrap(),
             ],
             cluster_weights: vec![0.5, 0.5],
@@ -303,34 +347,34 @@ mod tests {
         let params = OwnedThinParams {
             clusters: vec![
                 MultivariateNormal::new(
-                    DVector::from_vec(vec![0.0, 0.0]),
-                    DMatrix::from_diagonal_element(2, 2, 1.0),
+                    DVector::from_vec(vec![0.0, 0.0]).data.into(),
+                    DMatrix::from_diagonal_element(2, 2, 1.0).data.into(),
                 ).unwrap(),
                 MultivariateNormal::new(
-                    DVector::from_vec(vec![1.0, 1.0]),
-                    DMatrix::from_diagonal_element(2, 2, 1.0),
+                    DVector::from_vec(vec![1.0, 1.0]).data.into(),
+                    DMatrix::from_diagonal_element(2, 2, 1.0).data.into(),
                 ).unwrap(),
             ],
             cluster_weights: vec![0.5, 0.5],
             clusters_aux: vec![
                 [
                     MultivariateNormal::new(
-                        DVector::from_vec(vec![0.0, 0.0]),
-                        DMatrix::from_diagonal_element(2, 2, 1.0),
+                        DVector::from_vec(vec![0.0, 0.0]).data.into(),
+                        DMatrix::from_diagonal_element(2, 2, 1.0).data.into(),
                     ).unwrap(),
                     MultivariateNormal::new(
-                        DVector::from_vec(vec![1.0, 1.0]),
-                        DMatrix::from_diagonal_element(2, 2, 1.0),
+                        DVector::from_vec(vec![1.0, 1.0]).data.into(),
+                        DMatrix::from_diagonal_element(2, 2, 1.0).data.into(),
                     ).unwrap(),
                 ],
                 [
                     MultivariateNormal::new(
-                        DVector::from_vec(vec![0.0, 4.0]),
-                        DMatrix::from_diagonal_element(2, 2, 1.0),
+                        DVector::from_vec(vec![0.0, 4.0]).data.into(),
+                        DMatrix::from_diagonal_element(2, 2, 1.0).data.into(),
                     ).unwrap(),
                     MultivariateNormal::new(
-                        DVector::from_vec(vec![4.0, 0.0]),
-                        DMatrix::from_diagonal_element(2, 2, 1.0),
+                        DVector::from_vec(vec![4.0, 0.0]).data.into(),
+                        DMatrix::from_diagonal_element(2, 2, 1.0).data.into(),
                     ).unwrap(),
                 ],
             ],

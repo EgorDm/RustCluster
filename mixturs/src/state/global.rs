@@ -13,6 +13,14 @@ pub struct GlobalState<P: NormalConjugatePrior> {
 }
 
 impl<P: NormalConjugatePrior> GlobalState<P> {
+    /// Creates a new global state from the given full data statistics
+    ///
+    /// # Arguments
+    ///
+    /// * `data_stats`: The full data statistics
+    /// * `n_clusters`: The number of clusters to initialize
+    /// * `options`: The model options
+    /// * `rng`: The random number generator
     pub fn from_init<R: Rng>(
         data_stats: &P::SuffStats,
         n_clusters: usize,

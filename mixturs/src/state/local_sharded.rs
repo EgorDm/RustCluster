@@ -5,6 +5,8 @@ use crate::params::{ThinParams, SuperClusterStats};
 use crate::state::{LocalState, LocalWorker};
 use crate::stats::NormalConjugatePrior;
 
+/// A parallel variant of local state that splits data into equally sized shards
+/// and distributes computations across threads
 pub struct ShardedState<P: NormalConjugatePrior> {
     pub shards: Vec<LocalState<P>>,
 }
@@ -14,6 +16,13 @@ impl<P: NormalConjugatePrior> ShardedState<P> {
         Self { shards }
     }
 
+    /// Creates a new sharded state from the given data and number of shards
+    ///
+    /// # Arguments
+    ///
+    /// * `data`: The data to create the sharded state from (n_dims, n_points)
+    /// * `n_shards`: The number of shards to split the data into
+    ///
     pub fn from_data(data: DMatrix<f64>, n_shards: usize) -> Self {
         let shard_size = (data.ncols() as f64 / n_shards as f64).ceil() as usize;
 

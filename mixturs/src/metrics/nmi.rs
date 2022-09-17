@@ -7,6 +7,28 @@ use crate::metrics::{EvalData, Metric};
 use crate::params::thin::{MixtureParams, SuperMixtureParams, ThinParams};
 use crate::utils::{unique_with_indices};
 
+
+/// It takes two vectors of labels, one for the true labels and one for the predicted labels, and returns a matrix where the
+/// rows are the true labels and the columns are the predicted labels. The value at each row/column intersection is the
+/// number of times that true label was predicted as that predicted label
+///
+/// # Arguments:
+///
+/// * `labels_true`: The true labels of the data.
+/// * `labels_pred`: The predicted labels
+///
+/// # Returns:
+///
+/// A contingency matrix.
+///
+/// # Example:
+/// ```
+/// use mixturs::metrics::contingency_matrix;
+/// let labels_true = vec![1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3];
+/// let labels_pred = vec![1, 1, 1, 1, 2, 1, 2, 2, 2, 2, 3, 1, 3, 3, 3, 2, 2];
+///
+/// let contingency = contingency_matrix(&labels_true, &labels_pred);
+/// assert_eq!(contingency, vec![vec![5, 1, 0], vec![1, 4, 1], vec![0, 2, 3]]);
 pub fn contingency_matrix<T: Copy + Hash + Eq + Ord>(
     labels_true: &[T],
     labels_pred: &[T],
@@ -37,6 +59,25 @@ pub fn entropy<T: Copy + Hash + Eq>(data: &[T]) -> Option<f64> {
     Some(entropy)
 }
 
+/// Calculates the mutual information score of two variables, given a contingency table
+///
+/// # Arguments:
+///
+/// * `contingency`: The contingency table.
+///
+/// # Returns:
+///
+/// The mutual information score.
+///
+/// # Example:
+/// ```
+/// use statrs::assert_almost_eq;
+/// use mixturs::metrics::mutual_info_score;
+///
+/// let contingency = vec![vec![5, 1, 0], vec![1, 4, 1], vec![0, 2, 3]];
+/// let mi = mutual_info_score(&contingency);
+/// assert_almost_eq!(mi, 0.41022, 1e-4);
+/// ```
 pub fn mutual_info_score(
     contingency: &[Vec<usize>]
 ) -> f64 {
@@ -89,6 +130,29 @@ pub fn mutual_info_score(
     result.max(0.0)
 }
 
+/// It computes the mutual information between the true and predicted labels, and then normalizes it by the average entropy
+/// of the true and predicted labels
+///
+/// # Arguments:
+///
+/// * `labels_true`: The true labels of the data.
+/// * `labels_pred`: The predicted labels
+///
+/// # Returns:
+///
+/// The normalized mutual information score.
+///
+/// # Example:
+/// ```
+/// use statrs::assert_almost_eq;
+/// use mixturs::metrics::normalized_mutual_info_score;
+///
+/// let labels_true = vec![1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3];
+/// let labels_pred = vec![1, 1, 1, 1, 2, 1, 2, 2, 2, 2, 3, 1, 3, 3, 3, 2, 2];
+///
+/// let nmi = normalized_mutual_info_score(&labels_true, &labels_pred);
+/// assert_almost_eq!(nmi, 0.378349, 1e-4);
+/// ```
 pub fn normalized_mutual_info_score<T: Copy + Hash + Eq + Ord>(
     labels_true: &[T],
     labels_pred: &[T],
@@ -104,6 +168,7 @@ pub fn normalized_mutual_info_score<T: Copy + Hash + Eq + Ord>(
     2.0 * mi / (h_true + h_pred)
 }
 
+/// Normalized mutual information measure
 pub struct NMI;
 
 impl<P: ThinParams> Metric<P> for NMI {

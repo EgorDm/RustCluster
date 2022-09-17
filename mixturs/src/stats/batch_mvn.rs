@@ -5,12 +5,20 @@ use serde::{Serialize, Deserialize};
 use statrs::distribution::MultivariateNormal;
 use crate::utils::{col_broadcast_sub};
 
+/// Allows implementation of batchwise probability density functions.
+/// As the calculations are batched together it is usually faster than calculating the pdf for each sample individually.
 pub trait ContinuousBatchwise<K> {
+    /// Returns the probability density function for each `x` (column) in `xs` for a given
+    /// distribution.
+    /// May panic depending on the implementor.
     fn batchwise_pdf(
         &self,
         xs: K,
     ) -> DVector<f64>;
 
+    /// Returns the log of the probability density function calculated for each `x` (column) in `xs`
+    /// for a given distribution.
+    /// May panic depending on the implementor.
     fn batchwise_ln_pdf(
         &self,
         xs: K,
@@ -23,6 +31,17 @@ where
     DefaultAllocator: Allocator<f64, Dynamic>,
     S: StorageMut<f64, Dynamic, Dynamic>,
 {
+    /// Calculates the probability density function for the multivariate
+    /// normal distribution for each `x` (column) in `xs`
+    ///
+    /// # Formula
+    ///
+    /// ```ignore
+    /// (2 * π) ^ (-k / 2) * det(Σ) ^ (1 / 2) * e ^ ( -(1 / 2) * transpose(x - μ) * inv(Σ) * (x - μ))
+    /// ```
+    ///
+    /// where `μ` is the mean, `inv(Σ)` is the precision matrix, `det(Σ)` is the determinant
+    /// of the covariance matrix, and `k` is the dimension of the distribution
     fn batchwise_pdf(&self, xs: Matrix<f64, Dynamic, Dynamic, S>) -> DVector<f64> {
         let n_points = xs.ncols();
         let dvs = col_broadcast_sub(xs, self.mu()); // broadcast subtract?
@@ -37,6 +56,8 @@ where
         exp_term * self.pdf_const()
     }
 
+    /// Calculates the log probability density function for the multivariate
+    /// normal distribution for each `x` (column) in `xs`. Equivalent to pdf(x).ln().
     fn batchwise_ln_pdf(&self, xs: Matrix<f64, Dynamic, Dynamic, S>) -> DVector<f64> {
         let n_points = xs.ncols();
         let dvs = col_broadcast_sub(xs, self.mu()); // broadcast subtract?
@@ -77,7 +98,7 @@ impl From<MultivariateNormalDef> for MultivariateNormal {
 
 #[cfg(test)]
 mod tests {
-    use nalgebra::{DMatrix, DVector, Storage};
+    use nalgebra::{DMatrix, DVector};
     use statrs::distribution::MultivariateNormal;
     use crate::stats::batch_mvn::{ContinuousBatchwise};
     use crate::stats::tests::test_almost_mat;

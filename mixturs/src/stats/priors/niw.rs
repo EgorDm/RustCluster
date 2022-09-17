@@ -10,6 +10,9 @@ use statrs::function::gamma::mvlgamma;
 use serde::{Serialize, Deserialize};
 use crate::stats::{ConjugatePrior, Covariance, FromData, NormalConjugatePrior, PriorHyperParams, SufficientStats};
 
+
+/// The sufficient statistics needed to compute the posterior of the
+/// [Normal-Inverse-Wishart](https://en.wikipedia.org/wiki/Normal-inverse-Wishart_distribution) prior distribution.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq)]
 pub struct NIWStats {
@@ -73,6 +76,7 @@ impl<'a> Add<&'a NIWStats> for NIWStats {
     }
 }
 
+/// The hyperparameters of the [Normal-Inverse-Wishart](https://en.wikipedia.org/wiki/Normal-inverse-Wishart_distribution) prior distribution.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq)]
 pub struct NIWParams {
@@ -109,13 +113,26 @@ impl NIWParams {
     }
 }
 
+/// The [Normal-Inverse-Wishart](https://en.wikipedia.org/wiki/Normal-inverse-Wishart_distribution) prior distribution.
 #[derive(Clone, Debug)]
 pub struct NIW;
 
 impl ConjugatePrior for NIW {
+    /// The hyperparameters of the NIW distribution.
     type HyperParams = NIWParams;
+    /// The sufficient statistics of the data needed to compute the posterior.
     type SuffStats = NIWStats;
 
+    /// Compute the posterior hyperparameters given the prior hyperparameters and the sufficient statistics.
+    ///
+    /// # Arguments
+    ///
+    /// * `prior`: the hyperparameters of the prior distribution
+    /// * `stats`: the sufficient statistics of the data
+    ///
+    /// # Returns
+    ///
+    /// The hyperparameters for the posterior distribution
     fn posterior(
         prior: &Self::HyperParams,
         stats: &Self::SuffStats,
@@ -135,6 +152,19 @@ impl ConjugatePrior for NIW {
         NIWParams { kappa, mu, nu, psi }
     }
 
+    /// Compute the marginal log likelihood of the data given the prior and posterior hyperparameters.
+    /// This is the log likelihood of the data given the prior hyperparameters, plus the log likelihood
+    /// of the hyperparameters given the prior hyperparameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `prior`: the hyperparameters of the prior distribution
+    /// * `post`: the hyperparameters of the posterior distribution
+    ///
+    /// # Returns
+    ///
+    /// The marginal log likelihood of the data given the prior and posterior distribution hyperparameters
+    ///
     fn marginal_log_likelihood(
         prior: &Self::HyperParams,
         post: &Self::HyperParams,
@@ -149,6 +179,18 @@ impl ConjugatePrior for NIW {
             + (dim / 2.0) * (prior.kappa / post.kappa).ln()
     }
 
+    /// Compute the posterior predictive log likelihood of the data given the posterior hyperparameters.
+    /// This is the log likelihood of the data given the posterior hyperparameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `post`: the hyperparameters of the posterior distribution
+    /// * `data`: the data
+    ///
+    /// # Returns
+    ///
+    /// The posterior predictive log likelihood of the data given the posterior distribution hyperparameters
+    ///
     fn posterior_predictive<S: Storage<f64, Dynamic, Dynamic>>(
         _post: &Self::HyperParams,
         _data: &Matrix<f64, Dynamic, Dynamic, S>,
@@ -164,18 +206,19 @@ impl NormalConjugatePrior for NIW {
 }
 
 impl Distribution<MultivariateNormal> for NIWParams {
+    /// Sample parameters of a normal distribution from the normal conjugate prior distribution.
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> MultivariateNormal {
         let w = InverseWishart::new(self.nu, self.nu * &self.psi).unwrap();
         let sigma = w.sample(rng);
         let mv = MultivariateNormal::new(
             self.mu.clone().data.into(),
-            (sigma.clone() / self.kappa).data.into()
+            (sigma.clone() / self.kappa).data.into(),
         ).unwrap();
         let mu = mv.sample(rng);
 
         MultivariateNormal::new(
             mu.data.into(),
-            sigma.data.into()
+            sigma.data.into(),
         ).unwrap()
     }
 }

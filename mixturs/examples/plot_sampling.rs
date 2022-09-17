@@ -1,14 +1,10 @@
-mod parallellism;
-
 use nalgebra::{DMatrix, DVector};
-use ndarray::AssignElem;
-use num_traits::real::Real;
 use plotters::prelude::*;
 use rand::prelude::{Distribution, StdRng};
 use rand::SeedableRng;
 use mixturs::plotting::{Cluster2D, init_axes2d};
-use mixturs::stats::{ConjugatePrior, NormalConjugatePrior, NIW, NIWParams, NIWStats, SufficientStats, FromData};
-use statrs::distribution::{InverseWishart, MultivariateNormal};
+use mixturs::stats::{ConjugatePrior, NormalConjugatePrior, NIW, NIWParams, NIWStats, FromData};
+use statrs::distribution::MultivariateNormal;
 
 
 fn main() {
@@ -24,7 +20,10 @@ fn plot_points_dist() {
     let mu = DVector::from_row_slice(&[0.0, 0.0]);
     let cov = DMatrix::from_row_slice(2, 2, &[1.0, 0.0, 0.0, 1.0]);
 
-    let dist = MultivariateNormal::new(mu.clone(), cov.clone()).unwrap();
+    let dist = MultivariateNormal::new(
+        mu.clone().data.into(),
+        cov.clone().data.into(),
+    ).unwrap();
     let mut rng = StdRng::seed_from_u64(0);
 
 
@@ -112,7 +111,7 @@ fn plot_niw_chain() {
     ).unwrap();
 
     for i in 0..5 {
-        let mut dist = NIW::sample(&dist_params, &mut rng);
+        let dist = NIW::sample(&dist_params, &mut rng);
         let mut points = DMatrix::<f64>::zeros(2, 500);
         for mut point in points.column_iter_mut() {
             point.copy_from(&dist.sample(&mut rng));
