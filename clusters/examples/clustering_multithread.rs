@@ -1,10 +1,10 @@
 use std::fs::File;
+use bincode::deserialize_from;
 use nalgebra::{DMatrix, DVector, Dynamic, Matrix, RowDVector, Storage};
-use ndarray::{Array1, Array2};
-use ndarray_npy::read_npy;
 use plotters::prelude::*;
 use clusters::callback::{EvalData, MonitoringCallback};
 use clusters::model::Model;
+use clusters::NMI;
 use clusters::params::options::{FitOptions, ModelOptions};
 use clusters::stats::NIW;
 
@@ -25,11 +25,11 @@ fn main() {
     fit_options.workers = 10;
 
     let mut model = Model::from_options(model_options);
-    let callback = MonitoringCallback::from_data(
+    let mut callback = MonitoringCallback::from_data(
         EvalData::from_sample(&x, Some(&y), 1000)
     );
-    // callback.add_metric(NMI);
-    // callback.set_verbose(true);
+    callback.add_metric(NMI);
+    callback.set_verbose(true);
 
     model.fit(
         x.clone_owned(),

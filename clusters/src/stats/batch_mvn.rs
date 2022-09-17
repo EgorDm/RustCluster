@@ -66,7 +66,10 @@ struct MultivariateNormalDef {
 #[cfg(feature = "serde")]
 impl From<MultivariateNormalDef> for MultivariateNormal {
     fn from(def: MultivariateNormalDef) -> Self {
-        MultivariateNormal::new(def.mean, def.cov).unwrap()
+        MultivariateNormal::new(
+            def.mean.data.into(),
+            def.cov.data.into()
+        ).unwrap()
     }
 }
 
@@ -74,7 +77,7 @@ impl From<MultivariateNormalDef> for MultivariateNormal {
 
 #[cfg(test)]
 mod tests {
-    use nalgebra::{DMatrix, DVector};
+    use nalgebra::{DMatrix, DVector, Storage};
     use statrs::distribution::MultivariateNormal;
     use crate::stats::batch_mvn::{ContinuousBatchwise};
     use crate::stats::tests::test_almost_mat;
@@ -82,8 +85,8 @@ mod tests {
     #[test]
     fn test_pdf() {
         let mvn = MultivariateNormal::new(
-            DVector::from_vec(vec![0.0, 0.0]),
-            DMatrix::from_vec(2, 2, vec![1.0, 0.0, 0.0, 1.0]),
+            DVector::from_vec(vec![0.0, 0.0]).data.into(),
+            DMatrix::from_vec(2, 2, vec![1.0, 0.0, 0.0, 1.0]).data.into(),
         ).unwrap();
 
         let data = DMatrix::from_vec(2, 4, vec![
@@ -108,8 +111,8 @@ mod tests {
     #[test]
     fn test_ln_pdf() {
         let mvn = MultivariateNormal::new(
-            DVector::from_vec(vec![0.0, 0.0]),
-            DMatrix::from_vec(2, 2, vec![1.0, 0.0, 0.0, 1.0]),
+            DVector::from_vec(vec![0.0, 0.0]).data.into(),
+            DMatrix::from_vec(2, 2, vec![1.0, 0.0, 0.0, 1.0]).data.into(),
         ).unwrap();
 
         let data = DMatrix::from_vec(2, 4, vec![

@@ -2,9 +2,7 @@ use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign};
-use nalgebra::{DVector};
-use rand::distributions::Distribution;
-use rand::Rng;
+use rand::{Rng, distributions::Distribution};
 use statrs::distribution::{Dirichlet, MultivariateNormal};
 use crate::stats::{NormalConjugatePrior, SufficientStats};
 
@@ -30,7 +28,7 @@ impl<P: NormalConjugatePrior> SuperClusterParams<P> {
             aux_k.dist = P::sample(&prim.post, rng);
         }
 
-        let dir = Dirichlet::new(DVector::from_vec(vec![alpha / 2.0, alpha / 2.0])).unwrap();
+        let dir = Dirichlet::new(vec![alpha / 2.0, alpha / 2.0]).unwrap();
         let weights = dir.sample(rng).as_slice().try_into().unwrap();
 
         SuperClusterParams {
@@ -53,9 +51,9 @@ impl<P: NormalConjugatePrior> SuperClusterParams<P> {
         let post = P::posterior(&prim_l.prior, &stats);
         let prim = ClusterParams::new(prim_l.prior.clone(), post, stats, prim_r.dist.clone());
 
-        let dir = Dirichlet::new(DVector::from_vec(vec![
+        let dir = Dirichlet::new(vec![
             prim_l.stats.n_points() as f64 + alpha / 2.0, prim_r.stats.n_points() as f64 + alpha / 2.0,
-        ])).unwrap();
+        ]).unwrap();
         let weights = dir.sample(rng).as_slice().try_into().unwrap();
 
         SuperClusterParams {
@@ -75,9 +73,9 @@ impl<P: NormalConjugatePrior> SuperClusterParams<P> {
         let prim = self.prim.sample(rng);
         let aux = [self.aux[0].sample(rng), self.aux[1].sample(rng)];
 
-        let dir = Dirichlet::new(DVector::from_vec(vec![
+        let dir = Dirichlet::new(vec![
             self.aux[0].stats.n_points() as f64 + alpha / 2.0, self.aux[1].stats.n_points() as f64 + alpha / 2.0,
-        ])).unwrap();
+        ]).unwrap();
         let weights = dir.sample(rng).as_slice().try_into().unwrap();
 
         (prim, aux, weights)

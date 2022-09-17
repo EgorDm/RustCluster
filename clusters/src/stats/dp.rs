@@ -7,7 +7,7 @@ pub fn stick_breaking_sample(
     counts: &[f64], alpha: f64, rng: &mut impl Rng
 ) -> Vec<f64> {
     let cluster_weights = if counts.len() > 1 {
-        let dir = Dirichlet::new(DVector::from_row_slice(counts)).unwrap();
+        let dir = Dirichlet::new(counts.to_vec()).unwrap();
         dir.sample(rng)
     } else {
         DVector::from_element(1, 1.0)
