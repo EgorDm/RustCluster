@@ -11,7 +11,7 @@ repository = "https://github.com/EgorDm/mixturs"
 license = "MIT"
 edition = "2021"
 resolver = "2"
-readme = "README.md"
+readme = "../README.md"
 
 [dependencies]
 statrs-fork = "0.17"
