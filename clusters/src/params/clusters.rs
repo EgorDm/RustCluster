@@ -7,10 +7,9 @@ use rand::distributions::Distribution;
 use rand::Rng;
 use statrs::distribution::{Dirichlet, MultivariateNormal};
 use crate::stats::{NormalConjugatePrior, SufficientStats};
-use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(bound = "")]
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct SuperClusterParams<P: NormalConjugatePrior> {
     pub prim: ClusterParams<P>,
     pub aux: [ClusterParams<P>; 2],
@@ -92,7 +91,7 @@ impl<P: NormalConjugatePrior> SuperClusterParams<P> {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct SuperClusterStats<P: NormalConjugatePrior> {
     pub prim: P::SuffStats,
     pub aux: [P::SuffStats; 2],
@@ -138,7 +137,7 @@ impl<P: NormalConjugatePrior> SufficientStats for SuperClusterStats<P> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ClusterParams<P: NormalConjugatePrior> {
     pub prior: P::HyperParams,
     pub post: P::HyperParams,
@@ -170,7 +169,7 @@ impl<P: NormalConjugatePrior> ClusterParams<P> {
 }
 
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LLHistory {
     pub ll_history: VecDeque<f64>,
     pub capacity: usize,

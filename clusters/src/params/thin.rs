@@ -1,13 +1,11 @@
 use itertools::repeat_n;
 use nalgebra::{DMatrix, RowDVector};
 use rand::Rng;
-use serde::de::DeserializeOwned;
-use serde::{Serialize, Deserialize};
 use statrs::distribution::MultivariateNormal;
 use crate::stats::ContinuousBatchwise;
 use crate::utils::{col_normalize_log_weights, replacement_sampling_weighted};
 
-pub trait ThinParams: Clone + Send + Sync + Serialize + DeserializeOwned {
+pub trait ThinParams: Clone + Send + Sync {
     fn n_clusters(&self) -> usize;
 
     fn cluster_dist(&self, cluster_id: usize) -> &MultivariateNormal;
@@ -24,7 +22,7 @@ pub trait ThinParams: Clone + Send + Sync + Serialize + DeserializeOwned {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct OwnedThinParams {
     pub clusters: Vec<MultivariateNormal>,
     pub cluster_weights: Vec<f64>,

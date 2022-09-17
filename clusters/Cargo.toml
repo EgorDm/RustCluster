@@ -6,11 +6,11 @@ resolver = "2"
 
 [dependencies]
 rand = { version = "0.8", features = ["small_rng"], default-features = false }
-nalgebra = { version = "0.29", features = ["rand", "serde-serialize"] }
+nalgebra = { version = "0.29", features = ["rand"] }
 statrs = { path = "../statrs" }
 itertools = "0.10"
 rayon = "1.5"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"], optional = true }
 plotters = { git = 'https://github.com/plotters-rs/plotters?rev=b1dc7a', optional = true }
 plotters-backend = { git = 'https://github.com/plotters-rs/plotters?rev=b1dc7a', optional = true  }
 #remoc = "0.10.0"
@@ -20,8 +20,10 @@ criterion = { version = "0.3", features = ["html_reports"] }
 bincode = "1.3.3"
 
 [features]
-default = ["plot"]
+default = []
 plot = ["dep:plotters", "dep:plotters-backend"]
+serde = ["nalgebra/serde-serialize", "dep:serde"]
+
 
 [[bench]]
 name = "clusters_bench"

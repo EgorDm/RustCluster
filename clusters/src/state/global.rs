@@ -1,14 +1,12 @@
 use rand::Rng;
 use statrs::distribution::MultivariateNormal;
-use serde::{Serialize, Deserialize};
 use crate::params::clusters::{ClusterParams, SuperClusterParams, SuperClusterStats};
 use crate::params::options::{ModelOptions, OutlierRemoval};
 use crate::params::thin::ThinParams;
 use crate::stats::{NormalConjugatePrior, SplitMerge, stick_breaking_sample};
 use crate::state::GlobalWorker;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(bound = "")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GlobalState<P: NormalConjugatePrior> {
     pub clusters: Vec<SuperClusterParams<P>>,
     pub weights: Vec<f64>,

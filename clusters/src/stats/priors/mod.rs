@@ -3,8 +3,6 @@ use std::iter::Sum;
 use std::ops::{Add, AddAssign};
 use nalgebra::{Dynamic, Matrix, Storage};
 use rand::Rng;
-use serde::{Serialize};
-use serde::de::DeserializeOwned;
 use statrs::distribution::MultivariateNormal;
 
 pub use niw::*;
@@ -12,8 +10,8 @@ pub use niw::*;
 mod niw;
 
 pub trait ConjugatePrior: Clone {
-    type HyperParams: PriorHyperParams + Debug + Clone + PartialEq + Send + Sync + Serialize + DeserializeOwned + 'static;
-    type SuffStats: SufficientStats + FromData + Default + Debug + PartialEq + Send + Sync + Serialize + DeserializeOwned + 'static;
+    type HyperParams: PriorHyperParams + Debug + Clone + PartialEq + Send + Sync + 'static;
+    type SuffStats: SufficientStats + FromData + Default + Debug + PartialEq + Send + Sync + 'static;
 
     fn posterior(
         prior: &Self::HyperParams,

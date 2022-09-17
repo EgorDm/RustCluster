@@ -6,10 +6,12 @@ use rand::Rng;
 use statrs::consts::LN_PI;
 use statrs::distribution::{InverseWishart, MultivariateNormal};
 use statrs::function::gamma::mvlgamma;
-use crate::stats::{ConjugatePrior, Covariance, FromData, NormalConjugatePrior, PriorHyperParams, SufficientStats};
+#[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
+use crate::stats::{ConjugatePrior, Covariance, FromData, NormalConjugatePrior, PriorHyperParams, SufficientStats};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NIWStats {
     pub n_points: usize,
     pub mean_sum: DVector<f64>,
@@ -71,7 +73,8 @@ impl<'a> Add<&'a NIWStats> for NIWStats {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NIWParams {
     pub kappa: f64,
     pub mu: DVector<f64>,
@@ -106,7 +109,7 @@ impl NIWParams {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct NIW;
 
 impl ConjugatePrior for NIW {

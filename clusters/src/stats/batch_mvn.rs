@@ -1,5 +1,7 @@
-use nalgebra::{DefaultAllocator, DVector, Dynamic, Matrix, StorageMut};
+use nalgebra::{DefaultAllocator, DMatrix, DVector, Dynamic, Matrix, StorageMut};
 use nalgebra::allocator::Allocator;
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
 use statrs::distribution::MultivariateNormal;
 use crate::utils::{col_broadcast_sub};
 
@@ -51,12 +53,30 @@ where
     }
 }
 
+#[cfg(feature = "serde")]
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "MultivariateNormal")]
+struct MultivariateNormalDef {
+    #[serde(getter = "MultivariateNormal::mu")]
+    mean: DVector<f64>,
+    #[serde(getter = "MultivariateNormal::cov")]
+    cov: DMatrix<f64>,
+}
+
+#[cfg(feature = "serde")]
+impl From<MultivariateNormalDef> for MultivariateNormal {
+    fn from(def: MultivariateNormalDef) -> Self {
+        MultivariateNormal::new(def.mean, def.cov).unwrap()
+    }
+}
+
+
 
 #[cfg(test)]
 mod tests {
     use nalgebra::{DMatrix, DVector};
     use statrs::distribution::MultivariateNormal;
-    use crate::stats::batch_mvn::ContinuousBatchwise;
+    use crate::stats::batch_mvn::{ContinuousBatchwise};
     use crate::stats::tests::test_almost_mat;
 
     #[test]
