@@ -1123,9 +1123,9 @@ dependencies = [
 [[package]]
 name = "statrs"
 version = "0.15.0"
+source = "git+https://github.com/EgorDm/statrs.git?rev=beaf062#beaf06249b7732cf99bf8ff8d922b312c9310aae"
 dependencies = [
  "approx",
- "criterion",
  "lazy_static",
  "nalgebra",
  "num-traits",
