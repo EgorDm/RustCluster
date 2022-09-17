@@ -1,7 +1,7 @@
 use criterion::{criterion_group, Criterion};
 use rand::distributions::Standard;
 use rand::Rng;
-use clusters::metrics::normalized_mutual_info_score;
+use mixturs::metrics::normalized_mutual_info_score;
 
 fn bench_normalized_mutual_info_score(c: &mut Criterion) {
     let mut rng = rand::thread_rng();

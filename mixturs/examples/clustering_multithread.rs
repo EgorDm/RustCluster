@@ -1,12 +1,8 @@
 use std::fs::File;
 use bincode::deserialize_from;
-use nalgebra::{DMatrix, DVector, Dynamic, Matrix, RowDVector, Storage};
-use plotters::prelude::*;
-use clusters::callback::{EvalData, MonitoringCallback};
-use clusters::model::Model;
-use clusters::NMI;
-use clusters::params::options::{FitOptions, ModelOptions};
-use clusters::stats::NIW;
+use nalgebra::{DMatrix, RowDVector};
+use mixturs::callback::{EvalData, MonitoringCallback};
+use mixturs::{Model, NMI, NIW, FitOptions, ModelOptions};
 
 fn main() {
     let mut f = File::open("examples/data/x.bin").unwrap();

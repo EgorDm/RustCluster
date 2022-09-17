@@ -5,8 +5,8 @@ use ndarray_npy::read_npy;
 use plotters::coord::Shift;
 use plotters::coord::types::RangedCoordf64;
 use plotters::prelude::*;
-use clusters::plotting::{Cluster2D, Ellipse, init_axes2d, axes_range_from_points};
-use clusters::stats::Covariance;
+use mixturs::plotting::{Cluster2D, Ellipse, init_axes2d, axes_range_from_points};
+use mixturs::stats::Covariance;
 
 const PATH: &str = "examples/data/plot/plot_data.png";
 

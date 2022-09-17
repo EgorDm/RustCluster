@@ -1,8 +1,8 @@
 use std::fs::File;
 use nalgebra::{DMatrix, RowDVector};
-use clusters::{AIC, FitOptions, Model, ModelOptions, MonitoringCallback, NIW, NMI};
-use clusters::callback::{EvalData};
-use clusters::plotting::{PlotCallback};
+use mixturs::{AIC, FitOptions, Model, ModelOptions, MonitoringCallback, NIW, NMI};
+use mixturs::callback::{EvalData};
+use mixturs::plotting::{PlotCallback};
 use bincode::{deserialize_from};
 
 

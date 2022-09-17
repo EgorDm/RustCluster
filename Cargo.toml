@@ -1,4 +1,8 @@
 [workspace]
 members = [
-    "clusters",
+    "mixturs",
 ]
+
+[patch.crates-io]
+plotters = { git = 'https://github.com/plotters-rs/plotters', rev = "b1dc7a", optional = true }
+plotters-backend = { git = 'https://github.com/plotters-rs/plotters', rev = "b1dc7a", optional = true  }

@@ -2,8 +2,8 @@ use criterion::{criterion_group, Criterion};
 use nalgebra::{DMatrix, RowDVector};
 use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
-use clusters::state::{LocalState, LocalWorker};
-use clusters::stats::NIW;
+use mixturs::state::{LocalState, LocalWorker};
+use mixturs::stats::NIW;
 
 fn bench_local_collect_stats(c: &mut Criterion) {
     let mut rng = StdRng::seed_from_u64(42);

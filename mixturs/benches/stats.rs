@@ -3,9 +3,9 @@ use nalgebra::{DMatrix, DVector};
 use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
 use rand::rngs::SmallRng;
-use clusters::stats::Covariance;
+use mixturs::stats::Covariance;
 use statrs::distribution::{Continuous, MultivariateNormal};
-use clusters::stats::ContinuousBatchwise;
+use mixturs::stats::ContinuousBatchwise;
 use statrs::statistics::Statistics;
 
 fn bench_covariance(c: &mut Criterion) {

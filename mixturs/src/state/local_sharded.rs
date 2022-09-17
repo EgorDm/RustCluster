@@ -1,8 +1,7 @@
 use nalgebra::DMatrix;
 use rand::Rng;
 use rayon::prelude::*;
-use crate::params::clusters::SuperClusterStats;
-use crate::params::thin::ThinParams;
+use crate::params::{ThinParams, SuperClusterStats};
 use crate::state::{LocalState, LocalWorker};
 use crate::stats::NormalConjugatePrior;
 

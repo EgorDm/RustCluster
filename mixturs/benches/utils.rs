@@ -4,7 +4,7 @@ use rand::distributions::{Standard, Distribution, WeightedIndex};
 use rand::Rng;
 use rand::SeedableRng;
 use rand::rngs::SmallRng;
-use clusters::utils::{col_broadcast_add, replacement_sampling_weighted, reservoir_sampling_weighted, unique_with_indices};
+use mixturs::utils::{col_broadcast_add, replacement_sampling_weighted, reservoir_sampling_weighted, unique_with_indices};
 
 fn bench_unique_with_indices(c: &mut Criterion) {
     let values: Vec<i32> = rand::thread_rng().sample_iter(Standard).take(10000).collect();
