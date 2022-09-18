@@ -7,7 +7,7 @@ pub trait Covariance<T, R: Dim, C: Dim> {
         where DefaultAllocator: Allocator<T, C, C>;
 
     /// Returns column-wise covariance matrix of the given matrix.
-    fn col_cov(&self) -> OMatrix<T, R, R>
+    fn column_cov(&self) -> OMatrix<T, R, R>
         where DefaultAllocator: Allocator<T, R, R>;
 }
 
@@ -73,11 +73,11 @@ impl<
     ///     0.0, 1.0, 2.0,
     ///     2.0, 1.0, 0.0,
     /// );
-    /// let cov = data.col_cov();
+    /// let cov = data.column_cov();
     ///
     /// assert_eq!(cov, Matrix2::new(1.0, -1.0, -1.0, 1.0) * 2.0 / 3.0);
     /// ```
-    fn col_cov(&self) -> OMatrix<T, R, R>
+    fn column_cov(&self) -> OMatrix<T, R, R>
         where DefaultAllocator: Allocator<T, R, R>
     {
         self.clone_owned().col_cov_mut()
@@ -197,7 +197,7 @@ pub mod tests {
     #[test]
     fn test_covariance() {
         test_almost_mat(
-            &points1().col_cov(),
+            &points1().column_cov(),
             &DMatrix::from_row_slice(3, 3, &[
                 0.0549, 0.0115, 0.0008,
                 0.0115, 0.1061, 0.0116,

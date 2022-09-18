@@ -14,7 +14,7 @@
         </a>
     </p>
     <p>
-        <b>Unofficial implementation of Dirichlet Process Mixture Model Split/Merge algorithm.</b>
+        <b>Unofficial implementation of Dirichlet Process Mixture Model Sub-Clusters algorithm.</b>
     </p>
 </div>
 <p align="center">

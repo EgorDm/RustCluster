@@ -34,7 +34,7 @@ fn main() {
         let points = x.select_columns(&idx);
 
         let mu = points.column_mean().into_owned();
-        let cov = points.col_cov();
+        let cov = points.column_cov();
 
         plot_ctx.draw_series(
             Cluster2D::from_mat(

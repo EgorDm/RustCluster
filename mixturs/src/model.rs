@@ -1,9 +1,11 @@
 use std::thread::available_parallelism;
 use nalgebra::{DMatrix, RowDVector};
 use rand::prelude::*;
+use statrs::distribution::MultivariateNormal;
 use crate::callback::{Callback};
 use crate::params::options::{FitOptions, ModelOptions};
 use crate::params::thin::{MixtureParams, SuperMixtureParams};
+use crate::params::ThinParams;
 use crate::state::{GlobalState, GlobalWorker, LocalState, LocalWorker, ShardedState};
 use crate::stats::NormalConjugatePrior;
 
@@ -14,7 +16,7 @@ use crate::stats::NormalConjugatePrior;
 //     model_options: ModelOptions<P>,
 // }
 
-/// Dirichlet Process Mixture Model (DPMM) Split/Merge model introduced in
+/// Dirichlet Process Mixture Model (DPMM) Sub-Clusters model introduced in
 /// [1] and [2].
 ///
 /// [1] J. Chang and J. W. Fisher III, “Parallel Sampling of DP Mixture Models using Sub-Cluster Splits,” in Advances in Neural Information Processing Systems, 2013.
@@ -244,7 +246,6 @@ impl<P: NormalConjugatePrior> Model<P> {
         }
     }
 
-
     /// Predict the cluster labels for the data and their confidence.
     ///
     /// # Arguments
@@ -284,6 +285,10 @@ impl<P: NormalConjugatePrior> Model<P> {
 
         let global = self.global.as_ref().unwrap();
         SuperMixtureParams(global).predict(data)
+    }
+
+    pub fn params(&self) -> &GlobalState<P> {
+        self.global.as_ref().expect("Cannot get params if model has not been fitted yet")
     }
 }
 

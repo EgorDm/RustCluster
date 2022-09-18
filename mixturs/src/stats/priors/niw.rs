@@ -108,7 +108,7 @@ impl NIWParams {
         data: &Matrix<f64, Dynamic, Dynamic, S>,
     ) -> Self {
         let mu = data.column_mean();
-        let psi = data.col_cov();
+        let psi = data.column_cov();
         Self { kappa, mu, nu, psi }
     }
 }

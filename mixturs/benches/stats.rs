@@ -13,7 +13,7 @@ fn bench_covariance(c: &mut Criterion) {
     c.bench_function("row_cov", move |bh| bh.iter(|| a.row_cov()));
 
     let a = DMatrix::<f64>::new_random(100, 100);
-    c.bench_function("col_cov", move |bh| bh.iter(|| a.col_cov()));
+    c.bench_function("col_cov", move |bh| bh.iter(|| a.column_cov()));
 }
 
 fn bench_mvn(c: &mut Criterion) {
