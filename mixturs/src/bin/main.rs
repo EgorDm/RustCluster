@@ -34,19 +34,19 @@ pub struct Opt {
     pub outlier_removal: bool,
 
     /// Weight of the outlier prior
-    #[clap(default_value_t = 0.05)]
+    #[clap(long, default_value_t = 0.05)]
     pub outlier_weight: f64,
 
     /// Seed for the random number generator
-    #[clap(short, short_alias = 's', default_value_t = 42)]
+    #[clap(long, default_value_t = 42)]
     pub seed: u64,
 
     /// Weight of the outlier prior
-    #[clap(default_value_t = 30.0)]
+    #[clap(long, default_value_t = 30.0)]
     pub rgb_prior_multiplier: f64,
 
     /// Weight of the outlier prior
-    #[clap(default_value_t = 1.0)]
+    #[clap(long, default_value_t = 1.0)]
     pub xy_prior_multiplier: f64,
 
     /// Number of initial clusters

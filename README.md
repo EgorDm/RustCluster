@@ -25,6 +25,9 @@
 <!-- markdownlint-enable -->
 
 
+![Image Demo](docs/resources/image_clustering.png)
+
+
 To use as a library, add the following to your Cargo.toml. Executable builds can be found at https://github.com/EgorDm/mixturs/releases.
 
 ```toml
