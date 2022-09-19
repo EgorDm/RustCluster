@@ -1,20 +1,11 @@
 use std::thread::available_parallelism;
 use nalgebra::{DMatrix, RowDVector};
 use rand::prelude::*;
-use statrs::distribution::MultivariateNormal;
 use crate::callback::{Callback};
 use crate::params::options::{FitOptions, ModelOptions};
 use crate::params::thin::{MixtureParams, SuperMixtureParams};
-use crate::params::ThinParams;
 use crate::state::{GlobalState, GlobalWorker, LocalState, LocalWorker, ShardedState};
 use crate::stats::NormalConjugatePrior;
-
-// pub struct Model<
-//     P: NormalConjugatePrior,
-// > {
-//     global: Option<GlobalState<P>>,
-//     model_options: ModelOptions<P>,
-// }
 
 /// Dirichlet Process Mixture Model (DPMM) Sub-Clusters model introduced in
 /// [1] and [2].
