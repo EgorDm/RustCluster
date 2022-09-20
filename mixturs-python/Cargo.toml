@@ -1,0 +1,30 @@
+[package]
+name = "mixturs-python"
+version = "0.1.0"
+authors = ["Egor Dmitriev"]
+description = "Unofficial implementation of Dirichlet Process Mixture Model Split/Merge algorithm"
+keywords = ["probability", "statistics", "stats", "clustering", "math"]
+categories = ["science", "computer-vision", "mathematics"]
+documentation = "https://docs.rs/mixturs/"
+homepage = "https://github.com/EgorDm/mixturs"
+repository = "https://github.com/EgorDm/mixturs"
+license = "MIT"
+edition = "2021"
+resolver = "2"
+readme = "../README.md"
+
+[lib]
+name = "mixtupy"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies.mixturs]
+version = "0.1.0"
+
+[dependencies.pyo3]
+version = "0.17"
+features = ["extension-module", "multiple-pymethods"]
+
+[dependencies.numpy]
+version = "0.17"
+features = ["nalgebra"]

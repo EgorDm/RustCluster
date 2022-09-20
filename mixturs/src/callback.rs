@@ -7,7 +7,7 @@ use crate::metrics::{Metric};
 use crate::params::thin::ThinParams;
 use crate::utils::reservoir_sampling;
 
-pub trait Callback<P: ThinParams> {
+pub trait Callback<P: ThinParams>: Send + Sync {
     /// Called before the first step of the fitting procedure.
     ///
     /// # Arguments

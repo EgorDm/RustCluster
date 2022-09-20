@@ -32,12 +32,7 @@ serde = [
     "dep:serde"
 ]
 
-[dependencies.clap]
-version = "3.2"
-default-features = false
-features = ["std", "suggestions", "derive"]
-optional = true
-
+# Base
 [dependencies.statrs-fork]
 version = "0.17"
 
@@ -56,11 +51,13 @@ version = "0.8"
 features = ["small_rng"]
 default-features = false
 
+# Serialization
 [dependencies.serde]
 version = "1.0"
 features = ["derive"]
 optional = true
 
+# Plotting
 [dependencies.plotters]
 version = "0.3"
 optional = true
@@ -69,6 +66,7 @@ optional = true
 version = "0.3"
 optional = true
 
+# Images
 [dependencies.image]
 version = "0.24"
 optional = true
@@ -77,6 +75,12 @@ optional = true
 version = "0.6"
 default-features = false
 features = ["std"]
+optional = true
+
+[dependencies.clap]
+version = "3.2"
+default-features = false
+features = ["std", "suggestions", "derive"]
 optional = true
 
 [dev-dependencies]

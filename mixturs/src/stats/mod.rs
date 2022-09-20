@@ -9,3 +9,4 @@ pub use priors::*;
 pub use dp::*;
 pub use batch_mvn::*;
 pub use split_merge::*;
+pub use statrs::distribution::MultivariateNormal;

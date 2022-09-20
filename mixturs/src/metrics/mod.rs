@@ -9,7 +9,7 @@ mod nmi;
 mod ic;
 
 
-pub trait Metric<P: ThinParams> {
+pub trait Metric<P: ThinParams>: Send + Sync {
     fn compute(
         &mut self,
         i: usize,

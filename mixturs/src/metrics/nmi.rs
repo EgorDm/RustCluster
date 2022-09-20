@@ -169,6 +169,7 @@ pub fn normalized_mutual_info_score<T: Copy + Hash + Eq + Ord>(
 }
 
 /// Normalized mutual information measure
+#[derive(Clone)]
 pub struct NMI;
 
 impl<P: ThinParams> Metric<P> for NMI {
