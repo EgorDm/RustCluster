@@ -6,8 +6,6 @@ from mixtupy import *
 x = np.load(os.path.join(os.path.dirname(__file__), 'x.npy')).T
 y = np.load(os.path.join(os.path.dirname(__file__), 'y.npy')).astype(np.uint64).T
 
-print(y)
-
 mo = ModelOptions(2)
 model = Model(mo)
 

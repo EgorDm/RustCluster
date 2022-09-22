@@ -37,11 +37,75 @@ mixturs = "0.1"
 
 ## Features
 
-WIP
+* Cluster points without knowing the number of clusters in advance
+* Fastest CPU implementation of the algorithm
+* Python bindings to cluster numpy data
+* Command line tool for generating segmented images from JPG/PNG input files
 
 ## Examples
 
-WIP
+### [Rust Examples](https://github.com/EgorDm/mixturs/tree/master/mixturs/examples):
+
+```rust
+// Load data into a col major matrix
+let x: DMatrix<f64> = ...;
+
+// Set model options
+let mut model_options = ModelOptions::<NIW>::default(dim);
+model_options.alpha = 100.0;
+model_options.outlier = None;
+
+// Set fit options
+let mut fit_options = FitOptions::default();
+fit_options.init_clusters = 1;
+
+// Configure callbacks
+let mut callback = MonitoringCallback::from_data(
+    EvalData::from_sample(&x, Some(&y), 1000)
+);
+callback.add_metric(AIC);
+callback.add_callback(PlotCallback::new(
+    3,
+    "examples/data/plot/synthetic_2d".into(),
+    EvalData::from_sample(&x, None, 1000)
+));
+callback.set_verbose(true);
+
+// Fit the model
+let mut model = Model::from_options(model_options);
+model.fit(
+    x.clone_owned(),
+    &fit_options,
+    Some(callback),
+);
+```
+
+### [Python Examples](https://github.com/EgorDm/mixturs/tree/master/mixturs-python/examples):
+
+```python
+import numpy as np
+from mixtupy import *
+
+# Load data
+x = ...
+
+# Configure model
+mo = ModelOptions(2)
+model = Model(mo)
+
+# Fit model
+fo = FitOptions()
+fo.iters = 200
+fo.aic = True
+model.fit(x, fo, y=y)
+
+# Predict data point labels
+probs, labels = model.predict(x)
+
+# Extract cluster parameters
+print(model.cluster_weights())
+print(model.cluster_params())
+```
 
 ## Reference
 
