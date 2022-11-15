@@ -27,6 +27,7 @@ pub struct ModelOptions<P: NormalConjugatePrior> {
 }
 
 impl<P: NormalConjugatePrior> ModelOptions<P> {
+    #[cfg(not(tarpaulin_include))]
     pub fn default(dim: usize) -> Self {
         Self {
             data_dist: P::HyperParams::default(dim),
@@ -64,6 +65,7 @@ pub struct FitOptions {
 }
 
 impl Default for FitOptions {
+    #[cfg(not(tarpaulin_include))]
     fn default() -> Self {
         Self {
             seed: 42,

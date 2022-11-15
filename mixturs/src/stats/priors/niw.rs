@@ -35,6 +35,7 @@ impl Sum for NIWStats {
 }
 
 impl Default for NIWStats {
+    #[cfg(not(tarpaulin_include))]
     fn default() -> Self {
         Self {
             n_points: 0,
@@ -87,6 +88,7 @@ pub struct NIWParams {
 }
 
 impl PriorHyperParams for NIWParams {
+    #[cfg(not(tarpaulin_include))]
     fn default(dim: usize) -> Self {
         Self {
             kappa: 1.0,
