@@ -12,6 +12,9 @@
         <a href="https://docs.rs/mixturs">
             <img src="https://img.shields.io/docsrs/mixturs" alt="Docs">
         </a>
+        <a href="https://app.codecov.io/github/EgorDm/mixturs">
+            <img src="https://img.shields.io/codecov/c/github/EgorDm/mixturs" alt="Coverage">
+        </a>
     </p>
     <p>
         <b>Unofficial implementation of Dirichlet Process Mixture Model Sub-Clusters algorithm.</b>
